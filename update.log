@@ -1,0 +1,21 @@
+[2026-04-04 16:53:17] DOLI projection updater starting
+[2026-04-04 16:53:17] Loaded existing projections anchored at E19
+[2026-04-04 16:53:17] New epoch boundary: E20 (height=7260)
+[2026-04-04 16:53:17] Epoch 20 detected — fetching real data
+[2026-04-04 16:53:17] Real bonds: 671 — s = 0.5365 — producers: 20
+[2026-04-04 16:53:27] Failed to reach VPS2 RPC: <urlopen error timed out>
+[2026-04-04 16:53:27] VPS1: 2 bonds, 2.21567566 spendable
+[2026-04-04 16:53:27] VPS2: 2 bonds, 2.43070901 spendable
+[2026-04-04 16:53:27] Projected: 690 — accuracy: 97.2%
+[2026-04-04 16:53:27] Recalibrated: accumulate=2 burst=4
+[2026-04-04 16:53:27] Regenerated projections E20→E62
+[2026-04-04 16:55:03] DOLI projection updater starting
+[2026-04-04 16:55:03] Loaded existing projections anchored at E20
+[2026-04-04 17:50:03] New epoch boundary: E21 (height=7575)
+[2026-04-04 17:50:03] Epoch 21 detected — fetching real data
+[2026-04-04 17:50:03] Real bonds: 713 — s = 0.5049 — producers: 20
+[2026-04-04 17:50:03] VPS1: 2 bonds, 3.42779687 spendable
+[2026-04-04 17:50:03] VPS2: 2 bonds, 2.60258873 spendable
+[2026-04-04 17:50:03] Projected: 693 — accuracy: 97.2%
+[2026-04-04 17:50:03] Recalibrated: accumulate=15 burst=30
+[2026-04-04 17:50:03] Regenerated projections E21→E63
