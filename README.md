@@ -17,20 +17,23 @@ network from our genesis forward.
 ---
 
 ## How it works
-VPS1 node (187.124.148.105)
-└── update.py runs as systemd service
-├── detects epoch close via local RPC
-├── fetches real bond data from VPS1 + VPS2
-├── compares against projections → logs accuracy
-├── recalibrates growth model from real data
-├── regenerates projections.json + projections.md
-└── git commit + push → this repo
-GitHub (mapusimito/deep-space-network)
-└── webhook fires on every push
-└── Mac (MEDE) receives it instantly
-└── git pull → projections always fresh locally
-Claude Code
-└── git pull → reads projections.json → answers queries
+
+    VPS1 node (187.124.148.105)
+      └── update.py runs as systemd service
+            ├── detects epoch close via local RPC
+            ├── fetches real bond data from VPS1 + VPS2
+            ├── compares against projections → logs accuracy
+            ├── recalibrates growth model from real data
+            ├── regenerates projections.json + projections.md
+            └── git commit + push → this repo
+
+    GitHub (mapusimito/deep-space-network)
+      └── webhook fires on every push
+            └── Mac (MEDE) receives it instantly
+                  └── git pull → projections always fresh locally
+
+    Claude Code
+      └── git pull → reads projections.json → answers queries
 
 ---
 
