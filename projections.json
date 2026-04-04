@@ -19,6 +19,12 @@
       "accuracy_pct": 99.7
     },
     {
+      "epoch": 20,
+      "projected_bonds": 690,
+      "real_bonds": 671,
+      "accuracy_pct": 97.2
+    },
+    {
       "epoch": 21,
       "projected_bonds": 780,
       "real_bonds": 713,
