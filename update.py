@@ -28,8 +28,7 @@ from simulate import simulate, generate_markdown, SimConfig
 # --- Configuration ---
 BLOCKS_PER_EPOCH = 360
 BASE_UNITS = 100_000_000
-CHECK_INTERVAL = 300  # 5 minutes
-MATURATION_WAIT = 60  # wait 60s after epoch boundary for reward maturation
+MATURATION_BUFFER = 60  # extra seconds after epoch boundary for reward maturation
 TARGET_EPOCH_AHEAD = 42
 
 VPS1_RPC = "http://127.0.0.1:8500"
@@ -85,10 +84,19 @@ def get_total_bonds() -> tuple[int, int]:
 
 
 def get_balance(address: str) -> tuple[float, int]:
-    """Returns (spendable_doli, bond_count)."""
+    """Returns (spendable_doli, bond_count).
+    Assumes bonded field is in base units (same as confirmed).
+    """
     bal = rpc_call("getBalance", {"address": address})
     spendable = bal["confirmed"] / BASE_UNITS
-    bond_count = int(bal["bonded"] // (10 * BASE_UNITS))
+    bonded_raw = bal["bonded"]
+    bond_count = int(bonded_raw // (10 * BASE_UNITS))
+    # Sanity check: if bonded > 0 but bond_count is 0 or unreasonably high,
+    # the RPC format assumption may be wrong
+    if bonded_raw > 0 and (bond_count == 0 or bond_count > 500):
+        log.error(f"Suspect bond_count={bond_count} from bonded={bonded_raw} — "
+                  f"verify RPC 'bonded' field format (base units vs DOLI float)")
+        raise RuntimeError(f"Bond count sanity check failed: bonded={bonded_raw}, derived count={bond_count}")
     return spendable, bond_count
 
 
@@ -131,8 +139,8 @@ def save_projections(data: dict):
         f.write(generate_markdown(data))
 
 
-def recalibrate_growth(accuracy_log: list, default_accumulate: int = 22,
-                        default_burst: int = 44) -> tuple[int, int]:
+def recalibrate_growth(accuracy_log: list, default_accumulate: int = 35,
+                        default_burst: int = 70) -> tuple[int, int]:
     """Recalibrate from last 3+ real data points. Returns defaults if insufficient data."""
     if len(accuracy_log) < 3:
         return default_accumulate, default_burst
@@ -155,8 +163,8 @@ def recalibrate_growth(accuracy_log: list, default_accumulate: int = 22,
 
 def process_new_epoch(epoch: int, prev_data: dict | None):
     """Fetch real data, recalibrate, regenerate, commit, push."""
-    log.info(f"Epoch {epoch} closed — waiting {MATURATION_WAIT}s for reward maturation")
-    time.sleep(MATURATION_WAIT)
+    log.info(f"Epoch {epoch} closed — waiting {MATURATION_BUFFER}s for reward maturation")
+    time.sleep(MATURATION_BUFFER)
 
     log.info(f"Fetching real data for E{epoch}")
 
@@ -181,8 +189,8 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
         vps2_spendable, vps2_bonds = get_balance(VPS2_ADDRESS)
         log.info(f"VPS2: {vps2_bonds} bonds, {vps2_spendable:.8f} spendable")
     except Exception as e:
-        log.warning(f"Failed to fetch VPS2 balance: {e}")
-        vps2_spendable, vps2_bonds = 0.0, 2
+        log.error(f"Failed to fetch VPS2 balance: {e} — skipping regeneration to avoid corrupting model")
+        return
 
     # Build accuracy log
     accuracy_log = prev_data.get("accuracy_log", []) if prev_data else []
@@ -222,12 +230,12 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
         })
 
     # Get current growth rates from previous metadata
-    prev_acc = 22
-    prev_burst = 44
+    prev_acc = 35
+    prev_burst = 70
     if prev_data:
         sg = prev_data.get("metadata", {}).get("structural_growth", {})
-        prev_acc = sg.get("accumulate_epoch", 22)
-        prev_burst = sg.get("burst_epoch", 44)
+        prev_acc = sg.get("accumulate_epoch", 35)
+        prev_burst = sg.get("burst_epoch", 70)
 
     new_accumulate, new_burst = recalibrate_growth(accuracy_log, prev_acc, prev_burst)
     log.info(f"Recalibrated: accumulate={new_accumulate} burst={new_burst}")
@@ -289,7 +297,18 @@ def main():
         except Exception as e:
             log.error(f"Error in main loop: {e}")
 
-        time.sleep(CHECK_INTERVAL)
+        # Sleep until next epoch boundary instead of fixed polling
+        try:
+            height = get_current_height()
+            blocks_remaining = BLOCKS_PER_EPOCH - (height % BLOCKS_PER_EPOCH)
+            seconds_remaining = blocks_remaining * 10
+            sleep_time = seconds_remaining + MATURATION_BUFFER
+            log.info(f"Sleeping {sleep_time}s until next epoch boundary "
+                     f"({blocks_remaining} blocks remaining)")
+            time.sleep(sleep_time)
+        except Exception as e:
+            log.error(f"Failed to calculate sleep time: {e} — sleeping 300s")
+            time.sleep(300)
 
 
 if __name__ == "__main__":

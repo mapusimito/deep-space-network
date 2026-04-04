@@ -207,8 +207,8 @@ def handle_recalibrate(query: str, data: dict) -> str:
     # Recalculate structural growth if enough data
     old_meta = data["metadata"]
     sg = old_meta.get("structural_growth", {})
-    new_accumulate = sg.get("accumulate_epoch", 22)
-    new_burst = sg.get("burst_epoch", 44)
+    new_accumulate = sg.get("accumulate_epoch", 35)
+    new_burst = sg.get("burst_epoch", 70)
 
     if len(accuracy_log) >= 3:
         recent = accuracy_log[-4:]

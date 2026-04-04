@@ -50,13 +50,13 @@ class ProducerState:
 @dataclass
 class SimConfig:
     """Configuration for the simulation."""
-    anchor_epoch: int = 18
-    target_epoch: int = 60
-    anchor_total_bonds: int = 635
+    anchor_epoch: int = 19
+    target_epoch: int = 61
+    anchor_total_bonds: int = 668
     model: str = "pessimistic"
 
     vps1_bonds: int = 2
-    vps1_spendable: float = 7.54
+    vps1_spendable: float = 1.13
     vps2_bonds: int = 2
     vps2_spendable: float = 0.31
 
@@ -76,8 +76,13 @@ def compute_network_growth(epoch_offset: int, config: SimConfig) -> int:
     else:
         structural = config.structural_burst
 
-    if epoch_offset % 2 == 0 and epoch_offset > 0:
-        mid_miners = config.mid_miner_count * config.mid_miner_bonds_per_2_epochs
+    # Mid miners bond independently, distributed evenly across epochs
+    if epoch_offset > 0:
+        total_mid = config.mid_miner_count * config.mid_miner_bonds_per_2_epochs
+        if epoch_offset % 2 == 1:
+            mid_miners = (total_mid + 1) // 2  # ceil
+        else:
+            mid_miners = total_mid // 2
     else:
         mid_miners = 0
 
@@ -131,7 +136,7 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
         epoch_data = {
             "epoch": epoch,
             "total_bonds": total_bonds,
-            "s": round(s, 4),
+            "s": round(s, 8),
             "vps1": {
                 "bonds": vps1.bonds,
                 "spendable": round(vps1.spendable, 8),
