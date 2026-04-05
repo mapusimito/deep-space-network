@@ -1,7 +1,7 @@
 # DOLI Epoch Projections — Dilution Model
 
 **Anchor:** E29 (1034 bonds)
-**Generated:** 2026-04-05T02:20:40.054908+00:00
+**Generated:** 2026-04-05T02:20:48.134277+00:00
 **Model:** dilution
 **Dilution rate:** 0.035514 per epoch
 
