@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """
-DOLI Epoch Simulation Engine — Pessimistic Projection Model
+DOLI Epoch Simulation Engine — Balance-Based Projection
 
-Simulates epoch-by-epoch network growth and reward distribution
-from an anchor epoch to a target epoch.
+Projects bond timing by tracking spendable balances forward using
+current share value and observed dilution rate.
 
-Core formula: s = 360 / total_bonds (share per bond per epoch)
-Reward per producer = producer_bonds * s
-
-NOTE: Projections should be regenerated every time real epoch data
-comes in via the recalibrate command. The model is only as good as
-its last real data point.
+Core formula: s = 360 / total_bonds
+Reward per producer per epoch = producer_bonds * s
+Bond when spendable >= 10.01
 """
 
 import json
@@ -19,15 +16,13 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-# --- Constants ---
 BLOCKS_PER_EPOCH = 360
 BOND_COST = 10.0
-BOND_THRESHOLD = 10.01  # autobond triggers at this spendable balance
+BOND_THRESHOLD = 10.01
 
 
 @dataclass
 class ProducerState:
-    """Tracks a single producer's bonds and spendable balance."""
     name: str
     bonds: int
     spendable: float = 0.0
@@ -39,6 +34,7 @@ class ProducerState:
         return reward
 
     def try_bond(self) -> bool:
+        """Check if this producer can bond using only its own spendable."""
         self.bonded_this_epoch = False
         if self.spendable >= BOND_THRESHOLD:
             self.spendable -= BOND_COST
@@ -49,60 +45,64 @@ class ProducerState:
 
 @dataclass
 class SimConfig:
-    """Configuration for the simulation."""
-    anchor_epoch: int = 19
-    target_epoch: int = 61
-    anchor_total_bonds: int = 668
-    model: str = "pessimistic"
+    anchor_epoch: int = 24
+    target_epoch: int = 66
+    anchor_total_bonds: int = 856
+    anchor_s: float = 0.0  # computed from anchor_total_bonds if 0
+    dilution_rate: float = 0.03  # s decreases by this fraction per epoch
+    model: str = "dilution"
 
-    vps1_bonds: int = 2
-    vps1_spendable: float = 1.13
+    vps1_bonds: int = 3
+    vps1_spendable: float = 0.76
     vps2_bonds: int = 2
-    vps2_spendable: float = 0.31
+    vps2_spendable: float = 0.90
 
-    structural_accumulate: int = 35
-    structural_burst: int = 70
-
-    mid_miner_count: int = 7
-    mid_miner_bonds_per_2_epochs: int = 1
+    # Bond priority: which VPS to bond first when both have equal bonds
+    bond_priority: str = "vps1"
 
     accuracy_log: list = field(default_factory=list)
 
 
-def compute_network_growth(epoch_offset: int, config: SimConfig) -> int:
-    """Compute bonds added by non-VPS producers this epoch."""
-    if epoch_offset % 2 == 1:
-        structural = config.structural_accumulate
-    else:
-        structural = config.structural_burst
+def compute_dilution_rate(accuracy_log: list) -> float:
+    """Derive per-epoch dilution rate from real bond data.
+    Uses geometric mean across the full span for stability.
+    Returns fraction by which s decreases each epoch."""
+    real_entries = [e for e in accuracy_log if "real_bonds" in e]
+    if len(real_entries) < 2:
+        return 0.03  # default
 
-    # Mid miners bond independently, distributed evenly across epochs
-    if epoch_offset > 0:
-        total_mid = config.mid_miner_count * config.mid_miner_bonds_per_2_epochs
-        if epoch_offset % 2 == 1:
-            mid_miners = (total_mid + 1) // 2  # ceil
-        else:
-            mid_miners = total_mid // 2
-    else:
-        mid_miners = 0
+    points = sorted(real_entries, key=lambda e: e["epoch"])
+    first = points[0]
+    last = points[-1]
 
-    return structural + mid_miners
+    epoch_span = last["epoch"] - first["epoch"]
+    if epoch_span <= 0 or first["real_bonds"] <= 0 or last["real_bonds"] <= 0:
+        return 0.03
+
+    s_first = BLOCKS_PER_EPOCH / first["real_bonds"]
+    s_last = BLOCKS_PER_EPOCH / last["real_bonds"]
+
+    if s_last >= s_first:
+        return 0.01  # no dilution observed, use minimal default
+
+    # Geometric mean: (s_last/s_first)^(1/span) gives the per-epoch multiplier
+    per_epoch_ratio = (s_last / s_first) ** (1 / epoch_span)
+    dilution = 1 - per_epoch_ratio
+
+    return max(0.005, min(dilution, 0.15))  # clamp to reasonable range
 
 
 def simulate(config: Optional[SimConfig] = None) -> dict:
-    """
-    Run epoch-by-epoch simulation from anchor to target.
-    Returns dict with metadata, epochs array, and accuracy_log.
-    """
     if config is None:
         config = SimConfig()
 
     vps1 = ProducerState("VPS1", config.vps1_bonds, config.vps1_spendable)
     vps2 = ProducerState("VPS2", config.vps2_bonds, config.vps2_spendable)
 
-    epochs = []
+    s = config.anchor_s if config.anchor_s > 0 else BLOCKS_PER_EPOCH / config.anchor_total_bonds
     total_bonds = config.anchor_total_bonds
 
+    epochs = []
     vps1_pending_bond = False
     vps2_pending_bond = False
 
@@ -116,22 +116,61 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
             vps2.bonds += 1
             vps2_pending_bond = False
 
-        s = BLOCKS_PER_EPOCH / total_bonds
+        # Apply dilution after anchor epoch
+        if offset > 0:
+            s *= (1 - config.dilution_rate)
+            total_bonds = int(round(BLOCKS_PER_EPOCH / s))
 
-        vps1_reward = vps1.earn(s)
-        vps2_reward = vps2.earn(s)
-
-        if vps1.try_bond():
-            vps1_pending_bond = True
-        if vps2.try_bond():
-            vps2_pending_bond = True
-
-        if offset >= 0:
-            growth = compute_network_growth(offset + 1, config)
+        # Don't earn on anchor epoch — spendable already reflects current state
+        if offset == 0:
+            vps1_reward = 0.0
+            vps2_reward = 0.0
         else:
-            growth = 0
+            vps1_reward = vps1.earn(s)
+            vps2_reward = vps2.earn(s)
 
-        vps_growth = (1 if vps1.bonded_this_epoch else 0) + (1 if vps2.bonded_this_epoch else 0)
+        # Combined pool bonding: bond the VPS with fewer bonds first
+        # (if equal, use priority setting). Transfer between wallets as needed.
+        combined = vps1.spendable + vps2.spendable
+        vps1.bonded_this_epoch = False
+        vps2.bonded_this_epoch = False
+
+        if combined >= BOND_THRESHOLD:
+            # Decide who bonds: fewer bonds first, priority breaks ties
+            if vps1.bonds < vps2.bonds:
+                first, second = vps1, vps2
+            elif vps2.bonds < vps1.bonds:
+                first, second = vps2, vps1
+            elif config.bond_priority == "vps1":
+                first, second = vps1, vps2
+            else:
+                first, second = vps2, vps1
+
+            # Bond first using combined pool
+            deficit = BOND_COST - first.spendable
+            if deficit > 0:
+                transfer = min(deficit, second.spendable)
+                second.spendable -= transfer
+                first.spendable += transfer
+            if first.spendable >= BOND_COST:
+                first.spendable -= BOND_COST
+                first.bonded_this_epoch = True
+
+            # Check if second can also bond with remaining
+            if first.spendable + second.spendable >= BOND_THRESHOLD:
+                deficit2 = BOND_COST - second.spendable
+                if deficit2 > 0:
+                    transfer2 = min(deficit2, first.spendable)
+                    first.spendable -= transfer2
+                    second.spendable += transfer2
+                if second.spendable >= BOND_COST:
+                    second.spendable -= BOND_COST
+                    second.bonded_this_epoch = True
+
+        if vps1.bonded_this_epoch:
+            vps1_pending_bond = True
+        if vps2.bonded_this_epoch:
+            vps2_pending_bond = True
 
         epoch_data = {
             "epoch": epoch,
@@ -150,12 +189,10 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
                 "bonded_this_epoch": vps2.bonded_this_epoch,
             },
             "combined_reward": round(vps1_reward + vps2_reward, 8),
-            "network_growth": growth + vps_growth,
-            "real": (offset == 0),  # only anchor epoch is real data
+            "combined_spendable": round(vps1.spendable + vps2.spendable, 8),
+            "real": (offset == 0),
         }
         epochs.append(epoch_data)
-
-        total_bonds += growth + vps_growth
 
     output = {
         "metadata": {
@@ -164,11 +201,7 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
             "target_epoch": config.target_epoch,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "model": config.model,
-            "structural_growth": {
-                "accumulate_epoch": config.structural_accumulate,
-                "burst_epoch": config.structural_burst,
-                "last_calibrated": datetime.now(timezone.utc).isoformat(),
-            },
+            "dilution_rate": round(config.dilution_rate, 6),
         },
         "accuracy_log": config.accuracy_log,
         "epochs": epochs,
@@ -178,17 +211,15 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
 
 
 def generate_markdown(data: dict) -> str:
-    """Generate human-readable markdown table from simulation data."""
     meta = data["metadata"]
-    sg = meta.get("structural_growth", {})
 
     lines = [
-        "# DOLI Epoch Projections — Pessimistic Model",
+        "# DOLI Epoch Projections — Dilution Model",
         "",
         f"**Anchor:** E{meta['anchor_epoch']} ({meta['anchor_total_bonds']} bonds)",
         f"**Generated:** {meta['generated_at']}",
         f"**Model:** {meta['model']}",
-        f"**Structural growth:** accumulate={sg.get('accumulate_epoch', '?')}, burst={sg.get('burst_epoch', '?')}",
+        f"**Dilution rate:** {meta.get('dilution_rate', '?')} per epoch",
         "",
         "| Epoch | Total bonds | s | VPS1 bonds | VPS1 spendable | VPS2 bonds | VPS2 spendable | Combined reward | Bond events | Real |",
         "|------:|------------:|------:|-----------:|---------------:|-----------:|---------------:|----------------:|:------------|:----:|",
@@ -239,7 +270,6 @@ def generate_markdown(data: dict) -> str:
 
 
 def save_projections(output_dir: str = "."):
-    """Run simulation and save projections.json and projections.md."""
     import os
     data = simulate()
     with open(os.path.join(output_dir, "projections.json"), "w") as f:

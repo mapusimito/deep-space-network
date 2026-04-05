@@ -23,7 +23,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from simulate import simulate, generate_markdown, SimConfig
+from simulate import simulate, generate_markdown, SimConfig, compute_dilution_rate
 
 # --- Configuration ---
 BLOCKS_PER_EPOCH = 360
@@ -100,6 +100,39 @@ def get_balance(address: str) -> tuple[float, int]:
     return spendable, bond_count
 
 
+def get_epoch_reward_from_history(address: str, producer_bonds_prev_epoch: int) -> tuple[float | None, int | None]:
+    """Fetch latest epoch reward from doli history, derive total bonds.
+    Uses the bond count from the PREVIOUS epoch (when the reward was earned).
+    Returns (reward_amount, derived_total_bonds) or (None, None) on failure."""
+    try:
+        result = subprocess.run(
+            ["doli", "history"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode != 0:
+            log.warning(f"doli history failed: {result.stderr.strip()}")
+            return None, None
+
+        # Parse first Epoch_reward entry
+        lines = result.stdout.splitlines()
+        in_epoch_reward = False
+        for line in lines:
+            if "Type:     Epoch_reward" in line:
+                in_epoch_reward = True
+            elif in_epoch_reward and "Received:" in line:
+                # Extract amount: "+0.96385542 DOLI"
+                amount_str = line.split("+")[1].split(" ")[0]
+                reward = float(amount_str)
+                s_derived = reward / producer_bonds_prev_epoch
+                derived_bonds = int(round(BLOCKS_PER_EPOCH / s_derived))
+                return reward, derived_bonds
+        log.warning("No Epoch_reward found in doli history")
+        return None, None
+    except Exception as e:
+        log.warning(f"Failed to parse doli history: {e}")
+        return None, None
+
+
 # --- Git helpers ---
 def git_cmd(*args) -> str:
     result = subprocess.run(
@@ -113,13 +146,27 @@ def git_cmd(*args) -> str:
 
 def git_commit_and_push(epoch: int, total_bonds: int, s: float,
                          accuracy: float, vps1_bonds: int, vps2_bonds: int):
-    """Commit projections and push to GitHub."""
+    """Commit projections and push to GitHub. Pulls first to avoid rejection."""
     msg = (f"E{epoch} | bonds={total_bonds} | s={s:.4f} "
            f"| acc={accuracy:.1f}% | vps1={vps1_bonds}b vps2={vps2_bonds}b")
 
+    # Sync with remote before committing our changes
+    # Stash our generated files, pull, then pop and commit
+    git_cmd("stash", "--include-untracked")
+    git_cmd("pull", "--ff-only", "origin", "main")
+    git_cmd("stash", "pop")
+
     git_cmd("add", "projections.json", "projections.md")
     git_cmd("commit", "-m", msg)
-    push_result = git_cmd("push", "origin", "main")
+
+    result = subprocess.run(
+        ["git", "-C", str(PROJECTIONS_DIR), "push", "origin", "main"],
+        capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode != 0:
+        log.error(f"Push failed: {result.stderr.strip()}")
+        raise RuntimeError(f"git push failed: {result.stderr.strip()}")
+
     log.info(f"Committed and pushed: {msg}")
     return msg
 
@@ -139,26 +186,7 @@ def save_projections(data: dict):
         f.write(generate_markdown(data))
 
 
-def recalibrate_growth(accuracy_log: list, default_accumulate: int = 35,
-                        default_burst: int = 70) -> tuple[int, int]:
-    """Recalibrate from last 3+ real data points. Returns defaults if insufficient data."""
-    if len(accuracy_log) < 3:
-        return default_accumulate, default_burst
 
-    recent = accuracy_log[-min(4, len(accuracy_log)):]
-    growths = []
-    for i in range(1, len(recent)):
-        ed = recent[i]["epoch"] - recent[i-1]["epoch"]
-        bd = recent[i]["real_bonds"] - recent[i-1]["real_bonds"]
-        if ed > 0:
-            growths.append(bd / ed)
-
-    if len(growths) < 2:
-        return default_accumulate, default_burst
-
-    avg = sum(growths) / len(growths)
-    base = avg / 1.5
-    return max(1, int(round(base))), max(1, int(round(base * 2)))
 
 
 def process_new_epoch(epoch: int, prev_data: dict | None):
@@ -168,14 +196,13 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
 
     log.info(f"Fetching real data for E{epoch}")
 
+    # --- Measurement 1: getProducers snapshot ---
     try:
-        total_bonds, producer_count = get_total_bonds()
+        snapshot_bonds, producer_count = get_total_bonds()
+        log.info(f"Snapshot bonds: {snapshot_bonds} — producers: {producer_count}")
     except Exception as e:
         log.error(f"Failed to fetch total bonds: {e}")
         return
-
-    real_s = BLOCKS_PER_EPOCH / total_bonds
-    log.info(f"Real bonds: {total_bonds} — s = {real_s:.4f} — producers: {producer_count}")
 
     # Fetch VPS balances (both from local RPC — chain knows all)
     try:
@@ -184,6 +211,50 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
     except Exception as e:
         log.error(f"Failed to fetch VPS1 balance: {e}")
         return
+
+    # --- Measurement 2: reward-derived bond count ---
+    # Reward was earned during the PREVIOUS epoch, so we need the bond count
+    # from that epoch. Check if the producer bonded this epoch (spendable < 1
+    # and previous projection had more spendable) as a heuristic.
+    prev_epoch_bonds = vps1_bonds
+    if prev_data:
+        for e in prev_data["epochs"]:
+            if e["epoch"] == epoch - 1:
+                prev_epoch_bonds = e["vps1"]["bonds"]
+                break
+            elif e["epoch"] == epoch:
+                # If current epoch entry exists, check previous
+                prev_epoch_bonds = e["vps1"]["bonds"]
+                break
+    # If VPS1 bonded this epoch, previous epoch had one fewer bond
+    if vps1_bonds > prev_epoch_bonds:
+        prev_epoch_bonds_for_reward = prev_epoch_bonds
+    else:
+        prev_epoch_bonds_for_reward = vps1_bonds
+
+    reward_amount, reward_derived_bonds = get_epoch_reward_from_history(
+        VPS1_ADDRESS, prev_epoch_bonds_for_reward,
+    )
+    if reward_derived_bonds is not None:
+        log.info(f"Reward-derived bonds: {reward_derived_bonds} "
+                 f"(reward={reward_amount:.8f}, "
+                 f"using {prev_epoch_bonds_for_reward} bonds from prev epoch, "
+                 f"s={reward_amount/prev_epoch_bonds_for_reward:.8f})")
+    else:
+        log.warning("Could not derive bonds from reward — using snapshot only")
+
+    # --- Reconcile: reward-derived is mathematically exact, prefer it ---
+    if reward_derived_bonds is not None:
+        if reward_derived_bonds != snapshot_bonds:
+            diff_pct = abs(snapshot_bonds - reward_derived_bonds) / max(snapshot_bonds, reward_derived_bonds) * 100
+            log.info(f"Bond count: snapshot={snapshot_bonds} vs reward-derived={reward_derived_bonds} "
+                     f"(diff={diff_pct:.1f}%) — using reward-derived")
+        total_bonds = reward_derived_bonds
+    else:
+        total_bonds = snapshot_bonds  # fallback to snapshot
+
+    real_s = BLOCKS_PER_EPOCH / total_bonds
+    log.info(f"Final bonds: {total_bonds} — s = {real_s:.4f}")
 
     try:
         vps2_spendable, vps2_bonds = get_balance(VPS2_ADDRESS)
@@ -229,28 +300,22 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
             "accuracy_pct": 100.0,
         })
 
-    # Get current growth rates from previous metadata
-    prev_acc = 35
-    prev_burst = 70
-    if prev_data:
-        sg = prev_data.get("metadata", {}).get("structural_growth", {})
-        prev_acc = sg.get("accumulate_epoch", 35)
-        prev_burst = sg.get("burst_epoch", 70)
-
-    new_accumulate, new_burst = recalibrate_growth(accuracy_log, prev_acc, prev_burst)
-    log.info(f"Recalibrated: accumulate={new_accumulate} burst={new_burst}")
+    # Compute dilution rate from real data
+    dilution_rate = compute_dilution_rate(accuracy_log)
+    real_s = BLOCKS_PER_EPOCH / total_bonds
+    log.info(f"Dilution rate: {dilution_rate:.4f} per epoch")
 
     # Simulate
     config = SimConfig(
         anchor_epoch=epoch,
         target_epoch=epoch + TARGET_EPOCH_AHEAD,
         anchor_total_bonds=total_bonds,
+        anchor_s=real_s,
+        dilution_rate=dilution_rate,
         vps1_bonds=vps1_bonds,
         vps1_spendable=vps1_spendable,
         vps2_bonds=vps2_bonds,
         vps2_spendable=vps2_spendable,
-        structural_accumulate=new_accumulate,
-        structural_burst=new_burst,
         accuracy_log=accuracy_log,
     )
 
