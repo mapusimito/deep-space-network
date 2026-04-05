@@ -23,7 +23,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from simulate import simulate, generate_markdown, SimConfig, compute_dilution_rate
+from simulate import simulate, generate_markdown, SimConfig, compute_dilution_rate, classify_epoch_growth
 
 # --- Configuration ---
 BLOCKS_PER_EPOCH = 360
@@ -316,10 +316,31 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
             "vps2_bonds": vps2_bonds,
         })
 
-    # Compute dilution rate from real data
+    # Compute dilution rates from real data
     dilution_rate = compute_dilution_rate(accuracy_log)
     real_s = BLOCKS_PER_EPOCH / total_bonds
-    log.info(f"Dilution rate: {dilution_rate:.4f} per epoch")
+
+    # Classify accumulate/burst pattern and derive dual dilution rates
+    growth = classify_epoch_growth(accuracy_log)
+    accum_dilution = 0.0
+    burst_dilution = 0.0
+    anchor_phase = ""
+
+    if len(growth["epochs"]) >= 4:
+        accum_epochs = [e for e in growth["epochs"] if e["type"] == "accumulate"]
+        burst_epochs = [e for e in growth["epochs"] if e["type"] == "burst"]
+        if accum_epochs and burst_epochs:
+            accum_dilution = sum(e["dilution"] for e in accum_epochs) / len(accum_epochs)
+            burst_dilution = sum(e["dilution"] for e in burst_epochs) / len(burst_epochs)
+            # Determine anchor phase: classify the last delta leading into this epoch
+            last_classified = growth["epochs"][-1]
+            anchor_phase = last_classified["type"]
+            log.info(f"Dual dilution: accumulate={accum_dilution:.4f} burst={burst_dilution:.4f} "
+                     f"anchor_phase={anchor_phase} pattern={growth['pattern'][-6:]}")
+        else:
+            log.info(f"Dilution rate: {dilution_rate:.4f} per epoch (insufficient data for dual)")
+    else:
+        log.info(f"Dilution rate: {dilution_rate:.4f} per epoch (insufficient data for dual)")
 
     # Simulate
     config = SimConfig(
@@ -328,6 +349,9 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
         anchor_total_bonds=total_bonds,
         anchor_s=real_s,
         dilution_rate=dilution_rate,
+        accumulate_dilution=accum_dilution,
+        burst_dilution=burst_dilution,
+        anchor_phase=anchor_phase,
         vps1_bonds=vps1_bonds,
         vps1_spendable=vps1_spendable,
         vps2_bonds=vps2_bonds,

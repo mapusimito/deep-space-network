@@ -49,8 +49,13 @@ class SimConfig:
     target_epoch: int = 66
     anchor_total_bonds: int = 856
     anchor_s: float = 0.0  # computed from anchor_total_bonds if 0
-    dilution_rate: float = 0.03  # s decreases by this fraction per epoch
+    dilution_rate: float = 0.03  # flat fallback if accumulate/burst not available
     model: str = "dilution"
+
+    # Accumulate/burst dilution — derived from classify_epoch_growth()
+    accumulate_dilution: float = 0.0  # per-epoch dilution in accumulate phase
+    burst_dilution: float = 0.0       # per-epoch dilution in burst phase
+    anchor_phase: str = ""            # "accumulate" or "burst" — phase of anchor epoch
 
     vps1_bonds: int = 3
     vps1_spendable: float = 0.76
@@ -61,6 +66,111 @@ class SimConfig:
     bond_priority: str = "vps1"
 
     accuracy_log: list = field(default_factory=list)
+
+    @property
+    def has_dual_dilution(self) -> bool:
+        return self.accumulate_dilution > 0 and self.burst_dilution > 0 and self.anchor_phase != ""
+
+
+def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dict:
+    """Analyze real bond deltas to classify epochs as accumulate or burst.
+
+    Structural nodes alternate between accumulate (~35 bonds/epoch across 6 nodes)
+    and burst (~70 bonds/epoch) growth. This function extracts those weights from
+    observed data using k=2 clustering on epoch-to-epoch bond deltas.
+
+    Returns dict with:
+        epochs: list of {epoch, delta, type, bonds} per transition
+        accumulate_weight: mean delta for accumulate epochs
+        burst_weight: mean delta for burst epochs
+        pattern: string like "AABBAB..." showing the sequence
+    """
+    real_entries = [
+        e for e in accuracy_log
+        if "real_bonds" in e and e.get("accuracy_pct", 0) >= min_accuracy
+    ]
+    real_entries.sort(key=lambda e: e["epoch"])
+
+    if len(real_entries) < 3:
+        return {"epochs": [], "accumulate_weight": 35, "burst_weight": 70, "pattern": ""}
+
+    # Compute deltas and per-epoch dilution between consecutive epochs only
+    deltas = []
+    for i in range(1, len(real_entries)):
+        prev, curr = real_entries[i - 1], real_entries[i]
+        gap = curr["epoch"] - prev["epoch"]
+        if gap != 1:
+            continue  # skip non-consecutive (poisoned epochs removed gaps)
+        delta = curr["real_bonds"] - prev["real_bonds"]
+        if delta <= 0:
+            continue  # bonds can't shrink — measurement error
+        s_prev = BLOCKS_PER_EPOCH / prev["real_bonds"]
+        s_curr = BLOCKS_PER_EPOCH / curr["real_bonds"]
+        dilution = 1 - (s_curr / s_prev)  # how much s shrank this epoch
+        deltas.append({
+            "epoch": curr["epoch"],
+            "delta": delta,
+            "bonds": curr["real_bonds"],
+            "s": round(s_curr, 8),
+            "dilution": round(dilution, 6),
+        })
+
+    if len(deltas) < 3:
+        return {"epochs": deltas, "accumulate_weight": 35, "burst_weight": 70, "pattern": ""}
+
+    # k=2 clustering via iterative k-means on deltas.
+    # Filter extreme outliers first (IQR fence), then converge two centroids.
+    vals = sorted(d["delta"] for d in deltas)
+    q1 = vals[len(vals) // 4]
+    q3 = vals[3 * len(vals) // 4]
+    iqr = q3 - q1
+    fence_lo = q1 - 1.5 * iqr
+    fence_hi = q3 + 1.5 * iqr
+    clean_vals = [v for v in vals if fence_lo <= v <= fence_hi]
+
+    if len(clean_vals) < 3:
+        clean_vals = vals  # not enough after filtering, use all
+
+    # Initialize centroids at 1/3 and 2/3 percentile of clean data
+    c_lo = clean_vals[len(clean_vals) // 3]
+    c_hi = clean_vals[2 * len(clean_vals) // 3]
+
+    for _ in range(20):
+        lo_group = [v for v in clean_vals if abs(v - c_lo) <= abs(v - c_hi)]
+        hi_group = [v for v in clean_vals if abs(v - c_hi) < abs(v - c_lo)]
+        if not lo_group or not hi_group:
+            break
+        new_lo = sum(lo_group) / len(lo_group)
+        new_hi = sum(hi_group) / len(hi_group)
+        if abs(new_lo - c_lo) < 0.1 and abs(new_hi - c_hi) < 0.1:
+            c_lo, c_hi = new_lo, new_hi
+            break
+        c_lo, c_hi = new_lo, new_hi
+
+    threshold = (c_lo + c_hi) / 2
+
+    # Classify and compute weights (including outliers, classified by threshold)
+    accum_vals, burst_vals = [], []
+    for d in deltas:
+        if d["delta"] <= threshold:
+            d["type"] = "accumulate"
+            accum_vals.append(d["delta"])
+        else:
+            d["type"] = "burst"
+            burst_vals.append(d["delta"])
+
+    accum_weight = sum(accum_vals) / len(accum_vals) if accum_vals else 35
+    burst_weight = sum(burst_vals) / len(burst_vals) if burst_vals else 70
+
+    pattern = "".join("A" if d["type"] == "accumulate" else "B" for d in deltas)
+
+    return {
+        "epochs": deltas,
+        "accumulate_weight": round(accum_weight, 1),
+        "burst_weight": round(burst_weight, 1),
+        "threshold": round(threshold, 1),
+        "pattern": pattern,
+    }
 
 
 def compute_dilution_rate(accuracy_log: list) -> float:
@@ -118,7 +228,17 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
 
         # Apply dilution after anchor epoch
         if offset > 0:
-            s *= (1 - config.dilution_rate)
+            if config.has_dual_dilution:
+                # Alternate accumulate/burst from anchor phase
+                # anchor_phase tells us what the anchor epoch was;
+                # offset 1 is the NEXT epoch, so it flips
+                if config.anchor_phase == "accumulate":
+                    rate = config.burst_dilution if offset % 2 == 1 else config.accumulate_dilution
+                else:
+                    rate = config.accumulate_dilution if offset % 2 == 1 else config.burst_dilution
+            else:
+                rate = config.dilution_rate
+            s *= (1 - rate)
             total_bonds = int(round(BLOCKS_PER_EPOCH / s))
 
         # Don't earn on anchor epoch — spendable already reflects current state
@@ -194,15 +314,21 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
         }
         epochs.append(epoch_data)
 
+    metadata = {
+        "anchor_epoch": config.anchor_epoch,
+        "anchor_total_bonds": config.anchor_total_bonds,
+        "target_epoch": config.target_epoch,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "model": config.model,
+        "dilution_rate": round(config.dilution_rate, 6),
+    }
+    if config.has_dual_dilution:
+        metadata["accumulate_dilution"] = round(config.accumulate_dilution, 6)
+        metadata["burst_dilution"] = round(config.burst_dilution, 6)
+        metadata["anchor_phase"] = config.anchor_phase
+
     output = {
-        "metadata": {
-            "anchor_epoch": config.anchor_epoch,
-            "anchor_total_bonds": config.anchor_total_bonds,
-            "target_epoch": config.target_epoch,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "model": config.model,
-            "dilution_rate": round(config.dilution_rate, 6),
-        },
+        "metadata": metadata,
         "accuracy_log": config.accuracy_log,
         "epochs": epochs,
     }
