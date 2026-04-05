@@ -12,127 +12,169 @@
       "epoch": 19,
       "projected_bonds": 670,
       "real_bonds": 668,
-      "accuracy_pct": 99.7
+      "accuracy_pct": 99.7,
+      "vps1_bonds": 2,
+      "vps2_bonds": 2
     },
     {
       "epoch": 20,
       "projected_bonds": 690,
       "real_bonds": 671,
-      "accuracy_pct": 97.2
+      "accuracy_pct": 97.2,
+      "vps1_bonds": 2,
+      "vps2_bonds": 2
     },
     {
       "epoch": 21,
       "projected_bonds": 780,
       "real_bonds": 713,
-      "accuracy_pct": 90.6
+      "accuracy_pct": 90.6,
+      "vps1_bonds": 2,
+      "vps2_bonds": 2
     },
     {
       "epoch": 22,
       "projected_bonds": 752,
       "real_bonds": 781,
-      "accuracy_pct": 96.3
+      "accuracy_pct": 96.3,
+      "vps1_bonds": 2,
+      "vps2_bonds": 2
     },
     {
       "epoch": 23,
       "projected_bonds": 810,
       "real_bonds": 781,
-      "accuracy_pct": 96.3
+      "accuracy_pct": 96.3,
+      "vps1_bonds": 2,
+      "vps2_bonds": 2
     },
     {
       "epoch": 24,
       "projected_bonds": 1018,
       "real_bonds": 856,
-      "accuracy_pct": 81.1
+      "accuracy_pct": 81.1,
+      "vps1_bonds": 3,
+      "vps2_bonds": 2
     },
     {
       "epoch": 25,
       "projected_bonds": 818,
       "real_bonds": 818,
-      "accuracy_pct": 100.0
+      "accuracy_pct": 100.0,
+      "vps1_bonds": 3,
+      "vps2_bonds": 2
     },
     {
       "epoch": 26,
       "projected_bonds": 856,
       "real_bonds": 856,
-      "accuracy_pct": 100.0
+      "accuracy_pct": 100.0,
+      "vps1_bonds": 3,
+      "vps2_bonds": 2
     },
     {
       "epoch": 27,
       "projected_bonds": 886,
       "real_bonds": 886,
-      "accuracy_pct": 100.0
+      "accuracy_pct": 100.0,
+      "vps1_bonds": 3,
+      "vps2_bonds": 2
     },
     {
       "epoch": 28,
       "projected_bonds": 928,
       "real_bonds": 928,
-      "accuracy_pct": 100.0
+      "accuracy_pct": 100.0,
+      "vps1_bonds": 3,
+      "vps2_bonds": 2
     },
     {
       "epoch": 29,
       "projected_bonds": 1034,
       "real_bonds": 959,
-      "accuracy_pct": 92.2
+      "accuracy_pct": 92.2,
+      "vps1_bonds": 3,
+      "vps2_bonds": 2
     },
     {
       "epoch": 30,
       "projected_bonds": 1072,
       "real_bonds": 1012,
-      "accuracy_pct": 94.1
+      "accuracy_pct": 94.1,
+      "vps1_bonds": 3,
+      "vps2_bonds": 3
     },
     {
       "epoch": 31,
       "projected_bonds": 1051,
       "real_bonds": 1033,
-      "accuracy_pct": 98.3
+      "accuracy_pct": 98.3,
+      "vps1_bonds": 3,
+      "vps2_bonds": 3
     },
     {
       "epoch": 32,
       "projected_bonds": 1071,
       "real_bonds": 1064,
-      "accuracy_pct": 99.3
+      "accuracy_pct": 99.3,
+      "vps1_bonds": 3,
+      "vps2_bonds": 3
     },
     {
       "epoch": 33,
       "projected_bonds": 1103,
       "real_bonds": 1106,
-      "accuracy_pct": 99.7
+      "accuracy_pct": 99.7,
+      "vps1_bonds": 3,
+      "vps2_bonds": 3
     },
     {
       "epoch": 34,
       "projected_bonds": 1147,
       "real_bonds": 1136,
-      "accuracy_pct": 99.0
+      "accuracy_pct": 99.0,
+      "vps1_bonds": 4,
+      "vps2_bonds": 3
     },
     {
       "epoch": 35,
       "projected_bonds": 1177,
       "real_bonds": 1563,
-      "accuracy_pct": 75.3
+      "accuracy_pct": 75.3,
+      "vps1_bonds": 4,
+      "vps2_bonds": 3
     },
     {
       "epoch": 36,
       "projected_bonds": 1648,
       "real_bonds": 1176,
-      "accuracy_pct": 59.9
+      "accuracy_pct": 59.9,
+      "vps1_bonds": 4,
+      "vps2_bonds": 3
     },
     {
       "epoch": 37,
       "projected_bonds": 1216,
       "real_bonds": 1212,
-      "accuracy_pct": 99.7
+      "accuracy_pct": 99.7,
+      "vps1_bonds": 4,
+      "vps2_bonds": 3
     },
     {
       "epoch": 38,
       "projected_bonds": 1253,
       "real_bonds": 1285,
-      "accuracy_pct": 97.5
+      "accuracy_pct": 97.5,
+      "vps1_bonds": 4,
+      "vps2_bonds": 3
     },
     {
       "epoch": 39,
       "projected_bonds": 1330,
       "real_bonds": 1319,
-      "accuracy_pct": 99.2
+      "accuracy_pct": 99.2,
+      "vps1_bonds": 4,
+      "vps2_bonds": 3
     }
   ],
   "epochs": [

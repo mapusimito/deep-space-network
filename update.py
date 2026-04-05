@@ -243,13 +243,23 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
     else:
         log.warning("Could not derive bonds from reward — using snapshot only")
 
-    # --- Reconcile: reward-derived is mathematically exact, prefer it ---
+    # --- Reconcile: reward-derived is exact ONLY if producer had full liveness.
+    # If reward was reduced (attestation <100%), reward-derived inflates bond count.
+    # Detect this: if reward-derived > snapshot by >10%, producer likely had liveness
+    # issues → use snapshot. Otherwise trust reward-derived (snapshot includes pending). ---
     if reward_derived_bonds is not None:
         if reward_derived_bonds != snapshot_bonds:
             diff_pct = abs(snapshot_bonds - reward_derived_bonds) / max(snapshot_bonds, reward_derived_bonds) * 100
-            log.info(f"Bond count: snapshot={snapshot_bonds} vs reward-derived={reward_derived_bonds} "
-                     f"(diff={diff_pct:.1f}%) — using reward-derived")
-        total_bonds = reward_derived_bonds
+            if reward_derived_bonds > snapshot_bonds * 1.10:
+                log.warning(f"Bond count: snapshot={snapshot_bonds} vs reward-derived={reward_derived_bonds} "
+                            f"(diff={diff_pct:.1f}%) — reward-derived inflated, likely liveness issue — using snapshot")
+                total_bonds = snapshot_bonds
+            else:
+                log.info(f"Bond count: snapshot={snapshot_bonds} vs reward-derived={reward_derived_bonds} "
+                         f"(diff={diff_pct:.1f}%) — using reward-derived")
+                total_bonds = reward_derived_bonds
+        else:
+            total_bonds = reward_derived_bonds
     else:
         total_bonds = snapshot_bonds  # fallback to snapshot
 
@@ -281,6 +291,8 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
                 "projected_bonds": projected_bonds,
                 "real_bonds": total_bonds,
                 "accuracy_pct": round(accuracy_pct, 1),
+                "vps1_bonds": vps1_bonds,
+                "vps2_bonds": vps2_bonds,
             })
             log.info(f"Projected: {projected_bonds} — accuracy: {accuracy_pct:.1f}%")
             if accuracy_pct < 95:
@@ -291,6 +303,8 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
                 "projected_bonds": total_bonds,
                 "real_bonds": total_bonds,
                 "accuracy_pct": 100.0,
+                "vps1_bonds": vps1_bonds,
+                "vps2_bonds": vps2_bonds,
             })
     else:
         accuracy_log.append({
@@ -298,6 +312,8 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
             "projected_bonds": total_bonds,
             "real_bonds": total_bonds,
             "accuracy_pct": 100.0,
+            "vps1_bonds": vps1_bonds,
+            "vps2_bonds": vps2_bonds,
         })
 
     # Compute dilution rate from real data

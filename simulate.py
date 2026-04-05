@@ -254,15 +254,19 @@ def generate_markdown(data: dict) -> str:
             "",
             "## Accuracy Log",
             "",
-            "| Epoch | Projected bonds | Real bonds | Accuracy % |",
-            "|------:|----------------:|-----------:|-----------:|",
+            "| Epoch | Projected bonds | Real bonds | Accuracy % | VPS1 bonds | VPS2 bonds |",
+            "|------:|----------------:|-----------:|-----------:|-----------:|-----------:|",
         ])
         for entry in data["accuracy_log"]:
+            v1b = entry.get("vps1_bonds", "-")
+            v2b = entry.get("vps2_bonds", "-")
             lines.append(
                 f"| {entry['epoch']:>5} "
                 f"| {entry['projected_bonds']:>15} "
                 f"| {entry['real_bonds']:>10} "
-                f"| {entry['accuracy_pct']:>10.1f} |"
+                f"| {entry['accuracy_pct']:>10.1f} "
+                f"| {str(v1b):>10} "
+                f"| {str(v2b):>10} |"
             )
 
     lines.append("")
