@@ -49,6 +49,15 @@ commits and pushes to GitHub. Mac syncs automatically via launchd git pull.
 - [x] `doli-projections.service` — update loop (active)
 - [x] `doli-projections-http.service` — port 8888 (active)
 
+### Genesis Reset Detection (`update.py`)
+- [x] Detect genesis reset when `current_epoch < last_epoch`
+- [x] Archive projections and accuracy log to `genesis_archive/genesis_N/`
+- [x] Commit and push archive to GitHub before resetting
+- [x] Clear current projections and start fresh with empty accuracy log
+- [x] Track genesis number in `projections.json` metadata (`"genesis": N`)
+- [x] Pass genesis number through `SimConfig` → `simulate()` → metadata output
+- [x] Auto-increment genesis number on each network reset
+
 ## Current State
 - Anchor: E19 (668 real bonds, s=0.53892216)
 - Accuracy log: E19=99.7% (E20 entry removed — was premature/fabricated, Flaw 2 fix)

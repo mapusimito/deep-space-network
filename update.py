@@ -38,6 +38,7 @@ VPS2_ADDRESS = "doli17r677gnaj7cyhqlyxyfvkrfz63hggkryu9cr8fr7hl35etramxkshz2e49"
 PROJECTIONS_DIR = SCRIPT_DIR
 PROJECTIONS_JSON = PROJECTIONS_DIR / "projections.json"
 PROJECTIONS_MD = PROJECTIONS_DIR / "projections.md"
+GENESIS_ARCHIVE_DIR = PROJECTIONS_DIR / "genesis_archive"
 LOG_FILE = PROJECTIONS_DIR / "update.log"
 
 # --- Logging ---
@@ -156,7 +157,7 @@ def git_commit_and_push(epoch: int, total_bonds: int, s: float,
     git_cmd("pull", "--ff-only", "origin", "main")
     git_cmd("stash", "pop")
 
-    git_cmd("add", "projections.json", "projections.md")
+    git_cmd("add", "projections.json", "projections.md", "genesis_archive/")
     git_cmd("commit", "-m", msg)
 
     result = subprocess.run(
@@ -186,10 +187,78 @@ def save_projections(data: dict):
         f.write(generate_markdown(data))
 
 
+def get_current_genesis(data: dict | None) -> int:
+    """Return the genesis number from existing projections metadata, default 1."""
+    if data and "metadata" in data:
+        return data["metadata"].get("genesis", 1)
+    return 1
+
+
+def archive_genesis(data: dict) -> str:
+    """Archive current projections and accuracy log before a genesis reset.
+
+    Saves projections.json and projections.md into genesis_archive/genesis_N/.
+    Commits and pushes the archive to GitHub.
+    Returns the archive directory name (e.g. 'genesis_1').
+    """
+    genesis_num = get_current_genesis(data)
+    archive_name = f"genesis_{genesis_num}"
+    archive_dir = GENESIS_ARCHIVE_DIR / archive_name
+
+    archive_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save copies of current projections into the archive
+    with open(archive_dir / "projections.json", "w") as f:
+        json.dump(data, f, indent=2)
+    with open(archive_dir / "projections.md", "w") as f:
+        f.write(generate_markdown(data))
+
+    log.info(f"Archived projections to {archive_dir}")
+
+    # Commit and push the archive
+    git_cmd("add", str(archive_dir))
+    git_cmd("commit", "-m", f"Archive {archive_name} — network reset to genesis")
+    result = subprocess.run(
+        ["git", "-C", str(PROJECTIONS_DIR), "push", "origin", "main"],
+        capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode != 0:
+        log.error(f"Push archive failed: {result.stderr.strip()}")
+    else:
+        log.info(f"Pushed archive: {archive_name}")
+
+    return archive_name
+
+
+def handle_genesis_reset(current_epoch: int, prev_data: dict | None) -> int:
+    """Handle a genesis reset: archive old data, start fresh.
+
+    Returns the new genesis number.
+    """
+    old_genesis = get_current_genesis(prev_data)
+    new_genesis = old_genesis + 1
+
+    if prev_data:
+        old_anchor = prev_data["metadata"].get("anchor_epoch", "?")
+        log.warning(f"GENESIS RESET DETECTED: was at E{old_anchor}, now at E{current_epoch}")
+        archive_genesis(prev_data)
+    else:
+        log.warning(f"Genesis reset detected but no previous data to archive")
+
+    # Clear current projections — process_new_epoch will create fresh ones
+    if PROJECTIONS_JSON.exists():
+        PROJECTIONS_JSON.unlink()
+    if PROJECTIONS_MD.exists():
+        PROJECTIONS_MD.unlink()
+
+    log.info(f"Starting Genesis {new_genesis} from E{current_epoch}")
+    return new_genesis
 
 
 
-def process_new_epoch(epoch: int, prev_data: dict | None):
+
+
+def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
     """Fetch real data, recalibrate, regenerate, commit, push."""
     log.info(f"Epoch {epoch} closed — waiting {MATURATION_BUFFER}s for reward maturation")
     time.sleep(MATURATION_BUFFER)
@@ -357,6 +426,7 @@ def process_new_epoch(epoch: int, prev_data: dict | None):
         vps2_bonds=vps2_bonds,
         vps2_spendable=vps2_spendable,
         accuracy_log=accuracy_log,
+        genesis=genesis,
     )
 
     new_data = simulate(config)
@@ -379,9 +449,10 @@ def main():
 
     last_epoch = None
     prev_data = load_projections()
+    current_genesis = get_current_genesis(prev_data)
     if prev_data:
         last_epoch = prev_data["metadata"]["anchor_epoch"]
-        log.info(f"Loaded existing projections anchored at E{last_epoch}")
+        log.info(f"Loaded existing projections anchored at E{last_epoch} (Genesis {current_genesis})")
 
     while True:
         try:
@@ -390,13 +461,20 @@ def main():
 
             if last_epoch is None:
                 log.info(f"First run: height={height}, epoch={current_epoch}")
-                process_new_epoch(current_epoch, load_projections())
+                process_new_epoch(current_epoch, load_projections(), current_genesis)
+                last_epoch = current_epoch
+
+            elif current_epoch < last_epoch:
+                # Network reset to genesis — epoch went backwards
+                prev_data = load_projections()
+                current_genesis = handle_genesis_reset(current_epoch, prev_data)
+                process_new_epoch(current_epoch, None, current_genesis)
                 last_epoch = current_epoch
 
             elif current_epoch > last_epoch:
                 for ep in range(last_epoch + 1, current_epoch + 1):
                     log.info(f"New epoch boundary: E{ep} (height={height})")
-                    process_new_epoch(ep, load_projections())
+                    process_new_epoch(ep, load_projections(), current_genesis)
                 last_epoch = current_epoch
 
         except Exception as e:

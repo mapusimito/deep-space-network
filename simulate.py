@@ -65,6 +65,8 @@ class SimConfig:
     # Bond priority: which VPS to bond first when both have equal bonds
     bond_priority: str = "vps1"
 
+    genesis: int = 1  # genesis number — increments on network reset
+
     accuracy_log: list = field(default_factory=list)
 
     @property
@@ -315,6 +317,7 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
         epochs.append(epoch_data)
 
     metadata = {
+        "genesis": config.genesis,
         "anchor_epoch": config.anchor_epoch,
         "anchor_total_bonds": config.anchor_total_bonds,
         "target_epoch": config.target_epoch,
