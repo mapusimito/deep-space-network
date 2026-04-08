@@ -202,7 +202,16 @@ La única forma de que la comunidad sobreviva bajo el modelo actual es:
 3. **Que los small miners compren DOLI en mercado secundario** — la
    solución oficial del equipo, pero convierte DOLI en un sistema
    dependiente de capital externo, contradiciendo el pitch del whitepaper.
-4. **Cambio de protocolo** — BOND_UNIT elástico, doubling rewards,
+4. **Delegación** — existe en el código (`bins/node/src/node/rewards.rs:238-278`)
+   y permite a un small holder delegar bonds a un productor grande
+   (90/10 split). No rompe la matemática del techo (los rewards siguen
+   siendo bond-weighted), pero ahorra el costo operativo del VPS. Es
+   la solución implícita del equipo en el código, aunque no está en el
+   whitepaper. Efectivamente, convierte la "red descentralizada" en
+   una de productores estructurales con delegadores pasivos — el
+   opuesto del pitch original.
+5. **Cambio de protocolo** — BOND_UNIT elástico, doubling rewards,
    demurrage, o alguna combinación.
 
-Las primeras tres no son soluciones. La cuarta es la única salida real.
+Las opciones 1-4 no son soluciones reales. La 5 es la única salida
+honesta.

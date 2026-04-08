@@ -282,6 +282,40 @@ demostrablemente imposible bajo las condiciones reales. "Within months"
 sería una aspiración si las matemáticas lo permitieran. Las matemáticas
 no lo permiten.
 
+### 6.6 "Los small miners pueden usar delegación — el código lo permite."
+
+**Parcialmente cierto, pero confirma la tesis:** `bins/node/src/node/rewards.rs:238-278` implementa delegación donde un small holder delega bonds a un productor grande. Reparto: **90% al productor, 10% al delegador**.
+
+Dos problemas con esta "solución":
+
+1. **No resuelve la matemática del techo**: los rewards del delegador siguen siendo `bonds × (360/B) / d`. La serie sigue convergente. La delegación solo ahorra el costo operativo de un VPS — no levanta el techo.
+
+2. **Contradice el pitch del whitepaper**: la Sección 6.3 promete *"400 TPS on a $5/month VPS — accessibility is sufficient for global participation"*. Si la solución real es "no corras un nodo, delega a uno del equipo", entonces el VPS de $5/mes es decorativo y la descentralización es cosmética.
+
+Si el equipo propone delegación como respuesta, están confirmando que **el modelo "10 DOLI y un VPS" del whitepaper no funciona**, y que la solución real es que los small holders renuncien a ser productores y se conviertan en delegadores pasivos del equipo.
+
+### 6.7 "Pero ACTIVE_PRODUCERS_CAP = 50 limita el problema."
+
+**Falso — empeora el problema:** `crates/core/src/consensus/constants.rs:74` establece que solo los **top 50 productores por attestation** producen bloques. El tier system está activo desde `TIER_SYSTEM_ACTIVATION_HEIGHT = 0`. Los productores fuera del top-50 son "pure attestors" — reciben rewards proporcionales a sus bonds pero no producen bloques.
+
+Esto no cambia la matemática del techo (rewards siguen bond-weighted), pero:
+
+1. **El whitepaper miente por omisión** en Sección 7.3: *"Block production uses pure round-robin — every active producer receives equal block assignments."* Con el cap activo, esto es falso para producers 51+.
+
+2. **Cuando la red pase de 50 productores**, los small miners serán los primeros en caer al tier de "solo attestor" (menor seniority, menor bond count = menor ranking). Actualmente con 29 productores el cap no muerde, pero la arquitectura ya discrimina contra newcomers.
+
+### 6.8 "MAX_REGISTRATIONS_PER_BLOCK = 5 limita el crecimiento."
+
+**Asimétrico a favor de incumbentes:** `consensus/registration.rs:7`. Este cap aplica solo a **nuevas registraciones** (máximo 5 nuevos producers por bloque = 1,800/epoch). **Los producers existentes pueden hacer `AddBond` sin ninguna restricción.**
+
+El efecto neto es:
+- Nuevos entrantes (comunidad): limitados a 1,800/epoch
+- Incumbentes (equipo): compounding ilimitado
+
+No hay `MAX_BONDS_PER_BLOCK`. Los 12 nodos del equipo pueden hacer miles de `AddBond` por bloque sin límite. Los nuevos producers están puestos en cola.
+
+Esta asimetría no está documentada en el whitepaper y refuerza la tesis del dossier: **el protocolo, tal como está implementado, favorece estructuralmente a los incumbentes sobre los newcomers**.
+
 ---
 
 ## 7. Preguntas concretas al equipo
@@ -433,7 +467,117 @@ participation"*).
 
 ---
 
-## 10. Reproducibilidad
+## 10. Hallazgos del audit de código fuente
+
+Audit realizado sobre el repo `doli-network/doli` el 2026-04-08.
+El objetivo era identificar cualquier mecanismo protocolar que
+invalidara las proyecciones de este dossier.
+
+**Resultado del audit: las proyecciones se mantienen. Ningún mecanismo
+en el código invalida la matemática del techo.**
+
+Hallazgos confirmados en el código (todos consistentes con el análisis):
+
+### 10.1 Constantes confirmadas (no dinámicas)
+
+| Constante | Valor | Archivo | Estado |
+|---|---|---|---|
+| `BOND_UNIT` | 10 DOLI | `crates/core/src/consensus/constants.rs:263` | **LOCKED for mainnet** |
+| `MAX_BONDS_PER_PRODUCER` | 3,000 | `constants.rs:271` | estático |
+| `INITIAL_REWARD` | 1 DOLI/block | `consensus/params.rs` | estático |
+| `RewardMode::EpochPool` | activo | `consensus/params.rs:51` | default mainnet |
+
+El archivo `network_params/env_loader.rs:63-65` marca explícitamente el
+BOND_UNIT como *"LOCKED for mainnet — consensus-critical"*.
+
+### 10.2 Fórmula de rewards confirmada literalmente
+
+`bins/node/src/node/rewards.rs:14-290`:
+
+```
+reward[i] = pool * bonds[i] / Σ(qualifying_bonds)
+```
+
+Estrictamente proporcional. Sin bonus, sin floor, sin weighting inverso.
+Exactamente lo que asume nuestro modelo del techo.
+
+### 10.3 Mecanismos que NO existen en el código
+
+Verificados explícitamente por grep en todo el repo:
+
+- ❌ **Demurrage / bond decay**: no hay. `INACTIVITY_LEAK_RATE = 10%/epoch`
+  está declarado en `constants.rs:181-187` pero **no se invoca desde el
+  consensus path**. Es dead code — solo se reporta via RPC, nunca afecta
+  el estado.
+- ❌ **Treasury / rebate / faucet post-bootstrap**: no hay.
+- ❌ **Small producer bonus**: no hay.
+- ❌ **Cap dinámico a BOND_UNIT**: no hay.
+- ❌ **Redistribución más allá de attestation-based**: no hay.
+- ❌ **Cap a bond growth de incumbentes**: no hay.
+
+Las penalizaciones de doble producción son **100% burn**
+(`exit.rs:14-19`), no redistribución.
+
+### 10.4 Mecanismos encontrados que NO salvan el análisis
+
+- **Delegación** (`rewards.rs:238-278`): existe, reparte 90% al producer
+  y 10% al delegador. No rompe la matemática del techo. Ver 6.6.
+- **Tier system** (`constants.rs:74`): `ACTIVE_PRODUCERS_CAP = 50`, ya
+  activo. Ver 6.7.
+- **Registration cap** (`registration.rs:7`): 5 nuevos por bloque.
+  Asimétrico contra newcomers. Ver 6.8.
+- **Tier-1/2/3 fallback** (`rewards.rs:75-159`): safety net que evita
+  distribuciones de cero. No beneficia a small holders.
+- **Vesting penalty** (`exit.rs:84-119`): 75/50/25/0% burn on early exit
+  por año. Hace los bonds ilíquidos pero no afecta la dilución.
+
+### 10.5 Discrepancias whitepaper vs código
+
+Estas NO afectan directamente el análisis del techo, pero son evidencia
+adicional de que el protocolo descrito en el whitepaper no corresponde
+exactamente al protocolo que corre en producción:
+
+1. **`ACTIVE_PRODUCERS_CAP = 50` no está en el whitepaper.** La
+   Sección 7.3 afirma *"Block production uses pure round-robin — every
+   active producer receives equal block assignments"*. Esto es falso
+   para producers ranked 51+.
+
+2. **Tier system activation** (`TIER_SYSTEM_ACTIVATION_HEIGHT = 0`) no
+   está documentado en ninguna sección del whitepaper.
+
+3. **Tier-1/2/3 fallback de rewards** (rewards.rs:75-159) no está
+   descrito en la Sección 10.2 (*Epoch Reward Distribution*).
+
+4. **Deprecated dead code contradictorio**:
+   `crates/core/src/rewards.rs` contiene un `WeightedRewardCalculator`
+   con comentarios que dicen *"100% to producer via coinbase"* (líneas
+   271-307). Esto contradice el path activo. Es dead code pero es
+   evidencia de que el modelo económico ha cambiado sin actualizar el
+   whitepaper.
+
+5. **INACTIVITY_LEAK_RATE**: declarado en `constants.rs` pero sin
+   invocación en consensus. ¿Está planeado activarlo? ¿Cuándo? ¿Con qué
+   proceso de governance? El whitepaper no lo menciona.
+
+### 10.6 Implicación del audit
+
+Las respuestas de Sección 6 (contra-argumentos) incluyen ahora
+anticipadamente los hallazgos del audit (6.6 delegación, 6.7 ACTIVE_CAP,
+6.8 MAX_REGISTRATIONS asymmetry). El equipo no puede usar ninguno de
+estos mecanismos como refutación sin ser consciente de que ya están
+abordados.
+
+**Los parámetros económicos que determinan nuestro análisis son
+estáticos, están hardcoded, y están marcados como `consensus-critical`
+y `LOCKED for mainnet`. Cualquier cambio requeriría un protocol update
+bajo Sección 18 (3 de 5 maintainers + <40% veto por bond × seniority
+weight).** Dado que el equipo controla ~96% del peso de veto, el
+camino técnico para implementar la propuesta de este dossier es
+trivial — solo necesita voluntad política.
+
+---
+
+## 11. Reproducibilidad
 
 Todos los números de este dossier se pueden reproducir corriendo:
 
