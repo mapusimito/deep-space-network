@@ -1,16 +1,18 @@
 #!/bin/bash
-# DOLI Node Doctor & Watchdog v2 — unified health management
+# DOLI Node Doctor, Watchdog & Autoupgrader v3 — unified health management
 # Modeled after VPS2's proven architecture.
 #
 # Handles: permission fixes, lock cleanup, version upgrades (via doli snap),
-#          RPC health checks, sync monitoring, auto-recovery, auto-bonding.
+#          RPC health checks, sync monitoring, auto-recovery, auto-upgrade.
 #
 # Usage:
 #   doli-doctor doctor     — diagnose and fix common problems
 #   doli-doctor watchdog   — check health + auto-recover if needed
+#   doli-doctor upgrade    — check for updates and apply if available
 #   doli-doctor status     — quick health report
+#   doli-doctor cycle      — full cycle: upgrade check + watchdog (default timer)
 #
-# Runs every 2 minutes via systemd timer.
+# Runs every 3 minutes via systemd timer.
 
 set -euo pipefail
 
@@ -89,6 +91,51 @@ detect_version_change() {
         echo "$current" > "$VERSION_FILE"
         return 1
     fi
+    return 0
+}
+
+# Check the registry for a newer release and upgrade if available.
+# Uses `doli upgrade --yes --service doli-mainnet` (VPS2's proven command).
+# The doli CLI handles: stop service -> replace binary -> restart service.
+# After upgrade, doctor's version change detection will trigger snap recovery.
+check_upgrade() {
+    log "Checking for upgrades via doli upgrade"
+
+    local before after upgrade_output rc
+    before=$(/usr/bin/doli-node --version 2>/dev/null || echo "unknown")
+
+    # Run upgrade command non-interactively, targeting the specific service.
+    # Capture output so we can report on it.
+    upgrade_output=$(/usr/bin/doli upgrade --yes --service "$SERVICE" 2>&1)
+    rc=$?
+
+    if [ "$rc" -ne 0 ]; then
+        log "UPGRADE: command failed (rc=$rc): $(echo "$upgrade_output" | tail -3 | tr '\n' ' | ')"
+        return 1
+    fi
+
+    after=$(/usr/bin/doli-node --version 2>/dev/null || echo "unknown")
+
+    if [ "$before" = "$after" ]; then
+        log "UPGRADE: Already up to date ($before)"
+        return 0
+    fi
+
+    log "UPGRADE: Applied '$before' -> '$after'"
+    log "Upgrade output: $(echo "$upgrade_output" | tail -3 | tr '\n' ' | ')"
+
+    # The CLI should have restarted the service. Give it time to come up.
+    sleep 10
+
+    # Write new version so detect_version_change is consistent
+    echo "$after" > "$VERSION_FILE"
+
+    # After upgrade: snap recovery to handle any state format incompatibility.
+    # This is the VPS1 lesson — the CLI does its best but state_db may still
+    # have permission issues or format mismatches that only snap can fix.
+    log "UPGRADE: Running snap recovery after binary upgrade"
+    run_snap_recovery || log "UPGRADE: snap recovery had issues — check status"
+
     return 0
 }
 
@@ -266,12 +313,22 @@ status() {
     fi
 }
 
+cycle() {
+    log "=== CYCLE (upgrade + watchdog) ==="
+    # Step 1: check for upgrades (and apply if any)
+    check_upgrade || log "CYCLE: upgrade check failed, continuing"
+    # Step 2: health watchdog (may also trigger snap recovery if needed)
+    watchdog
+}
+
 # --- Main ---
 mkdir -p "$LOG_DIR"
 
-case "${1:-watchdog}" in
+case "${1:-cycle}" in
     doctor)   doctor ;;
     watchdog) watchdog ;;
+    upgrade)  check_upgrade ;;
     status)   status ;;
-    *)        echo "Usage: $0 {doctor|watchdog|status}"; exit 1 ;;
+    cycle)    cycle ;;
+    *)        echo "Usage: $0 {doctor|watchdog|upgrade|status|cycle}"; exit 1 ;;
 esac
