@@ -1,14 +1,14 @@
 {
   "metadata": {
     "genesis": 10,
-    "anchor_epoch": 61,
-    "anchor_total_bonds": 2084,
-    "target_epoch": 103,
-    "generated_at": "2026-04-14T01:55:00.434130+00:00",
+    "anchor_epoch": 62,
+    "anchor_total_bonds": 2197,
+    "target_epoch": 104,
+    "generated_at": "2026-04-14T03:03:41.714333+00:00",
     "model": "dilution",
-    "dilution_rate": 0.094162,
+    "dilution_rate": 0.093489,
     "accumulate_dilution": 0.045018,
-    "burst_dilution": 0.043765,
+    "burst_dilution": 0.044131,
     "anchor_phase": "burst"
   },
   "accuracy_log": [
@@ -507,13 +507,21 @@
       "accuracy_pct": 97.2,
       "vps1_bonds": 2,
       "vps2_bonds": 3
+    },
+    {
+      "epoch": 62,
+      "projected_bonds": 2182,
+      "real_bonds": 2197,
+      "accuracy_pct": 99.3,
+      "vps1_bonds": 2,
+      "vps2_bonds": 3
     }
   ],
   "epochs": [
     {
-      "epoch": 61,
-      "total_bonds": 2084,
-      "s": 0.17274472,
+      "epoch": 62,
+      "total_bonds": 2197,
+      "s": 0.16385981,
       "vps1": {
         "bonds": 2,
         "spendable": 0.0,
@@ -522,852 +530,852 @@
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 0.42223388,
+        "spendable": 1.27089016,
         "reward": 0.0,
         "bonded_this_epoch": false
       },
       "combined_reward": 0.0,
-      "combined_spendable": 0.42223388,
+      "combined_spendable": 1.27089016,
       "real": true
     },
     {
-      "epoch": 62,
-      "total_bonds": 2182,
-      "s": 0.16496805,
-      "vps1": {
-        "bonds": 3,
-        "spendable": 0.49490414,
-        "reward": 0.49490414,
-        "bonded_this_epoch": false
-      },
-      "vps2": {
-        "bonds": 3,
-        "spendable": 0.91713802,
-        "reward": 0.49490414,
-        "bonded_this_epoch": false
-      },
-      "combined_reward": 0.98980827,
-      "combined_spendable": 1.41204215,
-      "real": false
-    },
-    {
       "epoch": 63,
-      "total_bonds": 2282,
-      "s": 0.15774814,
+      "total_bonds": 2301,
+      "s": 0.15648312,
       "vps1": {
         "bonds": 3,
-        "spendable": 0.96814857,
-        "reward": 0.47324443,
+        "spendable": 0.46944935,
+        "reward": 0.46944935,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 1.39038245,
-        "reward": 0.47324443,
+        "spendable": 1.74033951,
+        "reward": 0.46944935,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.94648887,
-      "combined_spendable": 2.35853102,
+      "combined_reward": 0.9388987,
+      "combined_spendable": 2.20978886,
       "real": false
     },
     {
       "epoch": 64,
-      "total_bonds": 2390,
-      "s": 0.15064659,
+      "total_bonds": 2407,
+      "s": 0.14957742,
       "vps1": {
         "bonds": 3,
-        "spendable": 1.42008834,
-        "reward": 0.45193977,
+        "spendable": 0.91818161,
+        "reward": 0.44873226,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 1.84232222,
-        "reward": 0.45193977,
+        "spendable": 2.18907177,
+        "reward": 0.44873226,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.90387953,
-      "combined_spendable": 3.26241055,
+      "combined_reward": 0.89746452,
+      "combined_spendable": 3.10725337,
       "real": false
     },
     {
       "epoch": 65,
-      "total_bonds": 2499,
-      "s": 0.14405347,
+      "total_bonds": 2520,
+      "s": 0.1428437,
       "vps1": {
         "bonds": 3,
-        "spendable": 1.85224875,
-        "reward": 0.43216042,
+        "spendable": 1.34671269,
+        "reward": 0.42853109,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.27448263,
-        "reward": 0.43216042,
+        "spendable": 2.61760285,
+        "reward": 0.42853109,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.86432084,
-      "combined_spendable": 4.12673139,
+      "combined_reward": 0.85706218,
+      "combined_spendable": 3.96431555,
       "real": false
     },
     {
       "epoch": 66,
-      "total_bonds": 2617,
-      "s": 0.13756843,
+      "total_bonds": 2637,
+      "s": 0.13653992,
       "vps1": {
         "bonds": 3,
-        "spendable": 2.26495404,
-        "reward": 0.41270528,
+        "spendable": 1.75633244,
+        "reward": 0.40961975,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.68718792,
-        "reward": 0.41270528,
+        "spendable": 3.0272226,
+        "reward": 0.40961975,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.82541057,
-      "combined_spendable": 4.95214196,
+      "combined_reward": 0.81923949,
+      "combined_spendable": 4.78355504,
       "real": false
     },
     {
       "epoch": 67,
-      "total_bonds": 2737,
-      "s": 0.13154768,
+      "total_bonds": 2761,
+      "s": 0.13039312,
       "vps1": {
         "bonds": 3,
-        "spendable": 2.65959709,
-        "reward": 0.39464305,
+        "spendable": 2.14751179,
+        "reward": 0.39117935,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.08183097,
-        "reward": 0.39464305,
+        "spendable": 3.41840195,
+        "reward": 0.39117935,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.7892861,
-      "combined_spendable": 5.74142806,
+      "combined_reward": 0.78235871,
+      "combined_spendable": 5.56591375,
       "real": false
     },
     {
       "epoch": 68,
-      "total_bonds": 2866,
-      "s": 0.12562563,
+      "total_bonds": 2888,
+      "s": 0.12463879,
       "vps1": {
         "bonds": 3,
-        "spendable": 3.03647398,
-        "reward": 0.37687689,
+        "spendable": 2.52142816,
+        "reward": 0.37391637,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.45870786,
-        "reward": 0.37687689,
+        "spendable": 3.79231832,
+        "reward": 0.37391637,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.75375377,
-      "combined_spendable": 6.49518184,
+      "combined_reward": 0.74783273,
+      "combined_spendable": 6.31374648,
       "real": false
     },
     {
       "epoch": 69,
-      "total_bonds": 2997,
-      "s": 0.12012757,
+      "total_bonds": 3025,
+      "s": 0.11902776,
       "vps1": {
         "bonds": 3,
-        "spendable": 3.39685668,
-        "reward": 0.3603827,
+        "spendable": 2.87851144,
+        "reward": 0.35708328,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.81909056,
-        "reward": 0.3603827,
+        "spendable": 4.1494016,
+        "reward": 0.35708328,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.7207654,
-      "combined_spendable": 7.21594724,
+      "combined_reward": 0.71416656,
+      "combined_spendable": 7.02791305,
       "real": false
     },
     {
       "epoch": 70,
-      "total_bonds": 3138,
-      "s": 0.11471963,
+      "total_bonds": 3164,
+      "s": 0.11377499,
       "vps1": {
         "bonds": 3,
-        "spendable": 3.74101556,
-        "reward": 0.34415888,
+        "spendable": 3.21983642,
+        "reward": 0.34132498,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.16324944,
-        "reward": 0.34415888,
+        "spendable": 4.49072658,
+        "reward": 0.34132498,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.68831776,
-      "combined_spendable": 7.90426499,
+      "combined_reward": 0.68264995,
+      "combined_spendable": 7.710563,
       "real": false
     },
     {
       "epoch": 71,
-      "total_bonds": 3282,
-      "s": 0.10969887,
+      "total_bonds": 3313,
+      "s": 0.10865303,
       "vps1": {
         "bonds": 3,
-        "spendable": 4.07011217,
-        "reward": 0.32909661,
+        "spendable": 3.54579552,
+        "reward": 0.3259591,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.49234605,
-        "reward": 0.32909661,
+        "spendable": 4.81668568,
+        "reward": 0.3259591,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.65819322,
-      "combined_spendable": 8.56245821,
+      "combined_reward": 0.6519182,
+      "combined_spendable": 8.3624812,
       "real": false
     },
     {
       "epoch": 72,
-      "total_bonds": 3436,
-      "s": 0.10476041,
+      "total_bonds": 3466,
+      "s": 0.10385811,
       "vps1": {
         "bonds": 3,
-        "spendable": 4.3843934,
-        "reward": 0.31428123,
+        "spendable": 3.85736984,
+        "reward": 0.31157432,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.80662728,
-        "reward": 0.31428123,
+        "spendable": 5.12826,
+        "reward": 0.31157432,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.62856247,
-      "combined_spendable": 9.19102068,
+      "combined_reward": 0.62314865,
+      "combined_spendable": 8.98562985,
       "real": false
     },
     {
       "epoch": 73,
-      "total_bonds": 3594,
-      "s": 0.10017553,
+      "total_bonds": 3630,
+      "s": 0.09918259,
       "vps1": {
         "bonds": 3,
-        "spendable": 4.68491998,
-        "reward": 0.30052658,
+        "spendable": 4.15491762,
+        "reward": 0.29754777,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 5.10715386,
-        "reward": 0.30052658,
+        "spendable": 5.42580778,
+        "reward": 0.29754777,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.60105315,
-      "combined_spendable": 9.79207383,
+      "combined_reward": 0.59509554,
+      "combined_spendable": 9.58072539,
       "real": false
     },
     {
       "epoch": 74,
-      "total_bonds": 3763,
-      "s": 0.09566579,
+      "total_bonds": 3797,
+      "s": 0.0948056,
       "vps1": {
         "bonds": 3,
         "spendable": 0.0,
-        "reward": 0.28699737,
+        "reward": 0.2844168,
         "bonded_this_epoch": true
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 0.36606858,
-        "reward": 0.28699737,
+        "spendable": 0.149559,
+        "reward": 0.2844168,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.57399475,
-      "combined_spendable": 0.36606858,
+      "combined_reward": 0.56883361,
+      "combined_spendable": 0.149559,
       "real": false
     },
     {
       "epoch": 75,
-      "total_bonds": 3935,
-      "s": 0.09147894,
+      "total_bonds": 3976,
+      "s": 0.09053761,
       "vps1": {
         "bonds": 4,
-        "spendable": 0.36591574,
-        "reward": 0.36591574,
+        "spendable": 0.36215045,
+        "reward": 0.36215045,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 0.64050539,
-        "reward": 0.27443681,
+        "spendable": 0.42117184,
+        "reward": 0.27161284,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.64035255,
-      "combined_spendable": 1.00642113,
+      "combined_reward": 0.63376329,
+      "combined_spendable": 0.7833223,
       "real": false
     },
     {
       "epoch": 76,
-      "total_bonds": 4121,
-      "s": 0.08736071,
+      "total_bonds": 4160,
+      "s": 0.08654213,
       "vps1": {
         "bonds": 4,
-        "spendable": 0.71535857,
-        "reward": 0.34944283,
+        "spendable": 0.70831898,
+        "reward": 0.34616853,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 0.90258751,
-        "reward": 0.26208212,
+        "spendable": 0.68079824,
+        "reward": 0.2596264,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.61152495,
-      "combined_spendable": 1.61794608,
+      "combined_reward": 0.60579493,
+      "combined_spendable": 1.38911722,
       "real": false
     },
     {
       "epoch": 77,
-      "total_bonds": 4309,
-      "s": 0.08353733,
+      "total_bonds": 4356,
+      "s": 0.08264615,
       "vps1": {
         "bonds": 4,
-        "spendable": 1.04950788,
-        "reward": 0.33414931,
+        "spendable": 1.03890359,
+        "reward": 0.3305846,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 1.15319949,
-        "reward": 0.25061198,
+        "spendable": 0.92873669,
+        "reward": 0.24793845,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.58476129,
-      "combined_spendable": 2.20270737,
+      "combined_reward": 0.57852306,
+      "combined_spendable": 1.96764028,
       "real": false
     },
     {
       "epoch": 78,
-      "total_bonds": 4513,
-      "s": 0.07977662,
+      "total_bonds": 4557,
+      "s": 0.07899893,
       "vps1": {
         "bonds": 4,
-        "spendable": 1.36861435,
-        "reward": 0.31910647,
+        "spendable": 1.35489929,
+        "reward": 0.3159957,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 1.39252934,
-        "reward": 0.23932985,
+        "spendable": 1.16573347,
+        "reward": 0.23699678,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.55843632,
-      "combined_spendable": 2.76114369,
+      "combined_reward": 0.55299248,
+      "combined_spendable": 2.52063276,
       "real": false
     },
     {
       "epoch": 79,
-      "total_bonds": 4719,
-      "s": 0.07628516,
+      "total_bonds": 4772,
+      "s": 0.07544253,
       "vps1": {
         "bonds": 4,
-        "spendable": 1.67375498,
-        "reward": 0.30514063,
+        "spendable": 1.65666939,
+        "reward": 0.30177011,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 1.62138481,
-        "reward": 0.22885547,
+        "spendable": 1.39206105,
+        "reward": 0.22632758,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.5339961,
-      "combined_spendable": 3.29513979,
+      "combined_reward": 0.52809769,
+      "combined_spendable": 3.04873044,
       "real": false
     },
     {
       "epoch": 80,
-      "total_bonds": 4942,
-      "s": 0.07285093,
+      "total_bonds": 4992,
+      "s": 0.0721132,
       "vps1": {
         "bonds": 4,
-        "spendable": 1.96515869,
-        "reward": 0.29140371,
+        "spendable": 1.9451222,
+        "reward": 0.28845281,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 1.8399376,
-        "reward": 0.21855278,
+        "spendable": 1.60840065,
+        "reward": 0.2163396,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.5099565,
-      "combined_spendable": 3.80509629,
+      "combined_reward": 0.50479241,
+      "combined_spendable": 3.55352285,
       "real": false
     },
     {
       "epoch": 81,
-      "total_bonds": 5168,
-      "s": 0.06966257,
+      "total_bonds": 5227,
+      "s": 0.06886679,
       "vps1": {
         "bonds": 4,
-        "spendable": 2.24380899,
-        "reward": 0.2786503,
+        "spendable": 2.22058935,
+        "reward": 0.27546715,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.04892532,
-        "reward": 0.20898772,
+        "spendable": 1.81500101,
+        "reward": 0.20660036,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.48763802,
-      "combined_spendable": 4.29273431,
+      "combined_reward": 0.48206751,
+      "combined_spendable": 4.03559036,
       "real": false
     },
     {
       "epoch": 82,
-      "total_bonds": 5411,
-      "s": 0.06652648,
+      "total_bonds": 5469,
+      "s": 0.06582765,
       "vps1": {
         "bonds": 4,
-        "spendable": 2.50991492,
-        "reward": 0.26610593,
+        "spendable": 2.48389996,
+        "reward": 0.26331061,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.24850477,
-        "reward": 0.19957945,
+        "spendable": 2.01248397,
+        "reward": 0.19748296,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.46568538,
-      "combined_spendable": 4.75841969,
+      "combined_reward": 0.46079357,
+      "combined_spendable": 4.49638393,
       "real": false
     },
     {
       "epoch": 83,
-      "total_bonds": 5659,
-      "s": 0.06361492,
+      "total_bonds": 5727,
+      "s": 0.0628642,
       "vps1": {
         "bonds": 4,
-        "spendable": 2.76437461,
-        "reward": 0.25445969,
+        "spendable": 2.73535677,
+        "reward": 0.25145681,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.43934954,
-        "reward": 0.19084476,
+        "spendable": 2.20107658,
+        "reward": 0.18859261,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.44530445,
-      "combined_spendable": 5.20372414,
+      "combined_reward": 0.44004942,
+      "combined_spendable": 4.93643335,
       "real": false
     },
     {
       "epoch": 84,
-      "total_bonds": 5926,
-      "s": 0.06075108,
+      "total_bonds": 5991,
+      "s": 0.06008997,
       "vps1": {
         "bonds": 4,
-        "spendable": 3.00737894,
-        "reward": 0.24300434,
+        "spendable": 2.97571663,
+        "reward": 0.24035987,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.62160279,
-        "reward": 0.18225325,
+        "spendable": 2.38134648,
+        "reward": 0.1802699,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.42525759,
-      "combined_spendable": 5.62898173,
+      "combined_reward": 0.42062976,
+      "combined_spendable": 5.35706311,
       "real": false
     },
     {
       "epoch": 85,
-      "total_bonds": 6197,
-      "s": 0.05809229,
+      "total_bonds": 6273,
+      "s": 0.05738482,
       "vps1": {
         "bonds": 4,
-        "spendable": 3.23974809,
-        "reward": 0.23236914,
+        "spendable": 3.2052559,
+        "reward": 0.22953927,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.79587965,
-        "reward": 0.17427686,
+        "spendable": 2.55350093,
+        "reward": 0.17215445,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.406646,
-      "combined_spendable": 6.03562774,
+      "combined_reward": 0.40169372,
+      "combined_spendable": 5.75875683,
       "real": false
     },
     {
       "epoch": 86,
-      "total_bonds": 6489,
-      "s": 0.05547707,
+      "total_bonds": 6563,
+      "s": 0.05485239,
       "vps1": {
         "bonds": 4,
-        "spendable": 3.46165637,
-        "reward": 0.22190828,
+        "spendable": 3.42466546,
+        "reward": 0.21940956,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 2.96231086,
-        "reward": 0.16643121,
+        "spendable": 2.7180581,
+        "reward": 0.16455717,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.38833949,
-      "combined_spendable": 6.42396722,
+      "combined_reward": 0.38396673,
+      "combined_spendable": 6.14272356,
       "real": false
     },
     {
       "epoch": 87,
-      "total_bonds": 6786,
-      "s": 0.05304909,
+      "total_bonds": 6872,
+      "s": 0.05238303,
       "vps1": {
         "bonds": 4,
-        "spendable": 3.67385273,
-        "reward": 0.21219636,
+        "spendable": 3.63419757,
+        "reward": 0.20953211,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.12145813,
-        "reward": 0.15914727,
+        "spendable": 2.87520718,
+        "reward": 0.15714908,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.37134363,
-      "combined_spendable": 6.79531086,
+      "combined_reward": 0.36668119,
+      "combined_spendable": 6.50940475,
       "real": false
     },
     {
       "epoch": 88,
-      "total_bonds": 7106,
-      "s": 0.05066091,
+      "total_bonds": 7190,
+      "s": 0.05007133,
       "vps1": {
         "bonds": 4,
-        "spendable": 3.87649637,
-        "reward": 0.20264364,
+        "spendable": 3.8344829,
+        "reward": 0.20028533,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.27344086,
-        "reward": 0.15198273,
+        "spendable": 3.02542118,
+        "reward": 0.150214,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.35462637,
-      "combined_spendable": 7.14993722,
+      "combined_reward": 0.35049932,
+      "combined_spendable": 6.85990408,
       "real": false
     },
     {
       "epoch": 89,
-      "total_bonds": 7431,
-      "s": 0.04844371,
+      "total_bonds": 7529,
+      "s": 0.04781721,
       "vps1": {
         "bonds": 4,
-        "spendable": 4.07027122,
-        "reward": 0.19377485,
+        "spendable": 4.02575172,
+        "reward": 0.19126882,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.41877199,
-        "reward": 0.14533114,
+        "spendable": 3.16887279,
+        "reward": 0.14345162,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.33910599,
-      "combined_spendable": 7.48904321,
+      "combined_reward": 0.33472044,
+      "combined_spendable": 7.19462451,
       "real": false
     },
     {
       "epoch": 90,
-      "total_bonds": 7782,
-      "s": 0.04626286,
+      "total_bonds": 7876,
+      "s": 0.045707,
       "vps1": {
         "bonds": 4,
-        "spendable": 4.25532265,
-        "reward": 0.18505143,
+        "spendable": 4.20857973,
+        "reward": 0.18282801,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.55756057,
-        "reward": 0.13878857,
+        "spendable": 3.3059938,
+        "reward": 0.13712101,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.32384,
-      "combined_spendable": 7.81288321,
+      "combined_reward": 0.31994902,
+      "combined_spendable": 7.51457353,
       "real": false
     },
     {
       "epoch": 91,
-      "total_bonds": 8138,
-      "s": 0.04423814,
+      "total_bonds": 8248,
+      "s": 0.04364935,
       "vps1": {
         "bonds": 4,
-        "spendable": 4.43227522,
-        "reward": 0.17695257,
+        "spendable": 4.38317713,
+        "reward": 0.1745974,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.690275,
-        "reward": 0.13271443,
+        "spendable": 3.43694185,
+        "reward": 0.13094805,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.309667,
-      "combined_spendable": 8.12255022,
+      "combined_reward": 0.30554545,
+      "combined_spendable": 7.82011898,
       "real": false
     },
     {
       "epoch": 92,
-      "total_bonds": 8521,
-      "s": 0.04224662,
+      "total_bonds": 8628,
+      "s": 0.04172308,
       "vps1": {
         "bonds": 4,
-        "spendable": 4.60126169,
-        "reward": 0.16898647,
+        "spendable": 4.55006944,
+        "reward": 0.16689231,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.81701485,
-        "reward": 0.12673985,
+        "spendable": 3.56211108,
+        "reward": 0.12516923,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.29572631,
-      "combined_spendable": 8.41827653,
+      "combined_reward": 0.29206154,
+      "combined_spendable": 8.11218052,
       "real": false
     },
     {
       "epoch": 93,
-      "total_bonds": 8911,
-      "s": 0.04039767,
+      "total_bonds": 9035,
+      "s": 0.03984477,
       "vps1": {
         "bonds": 4,
-        "spendable": 4.76285238,
-        "reward": 0.1615907,
+        "spendable": 4.70944853,
+        "reward": 0.1593791,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 3.93820787,
-        "reward": 0.12119302,
+        "spendable": 3.6816454,
+        "reward": 0.11953432,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.28278372,
-      "combined_spendable": 8.70106025,
+      "combined_reward": 0.27891342,
+      "combined_spendable": 8.39109394,
       "real": false
     },
     {
       "epoch": 94,
-      "total_bonds": 9331,
-      "s": 0.03857904,
+      "total_bonds": 9452,
+      "s": 0.0380864,
       "vps1": {
         "bonds": 4,
-        "spendable": 4.91716854,
-        "reward": 0.15431616,
+        "spendable": 4.86179413,
+        "reward": 0.1523456,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.05394498,
-        "reward": 0.11573712,
+        "spendable": 3.7959046,
+        "reward": 0.1142592,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.27005327,
-      "combined_spendable": 8.97111352,
+      "combined_reward": 0.2666048,
+      "combined_spendable": 8.65769874,
       "real": false
     },
     {
       "epoch": 95,
-      "total_bonds": 9759,
-      "s": 0.03689061,
+      "total_bonds": 9898,
+      "s": 0.03637181,
       "vps1": {
         "bonds": 4,
-        "spendable": 5.06473098,
-        "reward": 0.14756244,
+        "spendable": 5.00728139,
+        "reward": 0.14548726,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.16461681,
-        "reward": 0.11067183,
+        "spendable": 3.90502005,
+        "reward": 0.10911544,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.25823427,
-      "combined_spendable": 9.22934779,
+      "combined_reward": 0.2546027,
+      "combined_spendable": 8.91230144,
       "real": false
     },
     {
       "epoch": 96,
-      "total_bonds": 10219,
-      "s": 0.03522986,
+      "total_bonds": 10355,
+      "s": 0.0347667,
       "vps1": {
         "bonds": 4,
-        "spendable": 5.2056504,
-        "reward": 0.14091943,
+        "spendable": 5.14634821,
+        "reward": 0.13906681,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.27030638,
-        "reward": 0.10568957,
+        "spendable": 4.00932016,
+        "reward": 0.10430011,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.246609,
-      "combined_spendable": 9.47595679,
+      "combined_reward": 0.24336693,
+      "combined_spendable": 9.15566836,
       "real": false
     },
     {
       "epoch": 97,
-      "total_bonds": 10686,
-      "s": 0.03368801,
+      "total_bonds": 10843,
+      "s": 0.03320157,
       "vps1": {
         "bonds": 4,
-        "spendable": 5.34040243,
-        "reward": 0.13475203,
+        "spendable": 5.27915447,
+        "reward": 0.13280626,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.3713704,
-        "reward": 0.10106402,
+        "spendable": 4.10892485,
+        "reward": 0.0996047,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.23581604,
-      "combined_spendable": 9.71177283,
+      "combined_reward": 0.23241096,
+      "combined_spendable": 9.38807932,
       "real": false
     },
     {
       "epoch": 98,
-      "total_bonds": 11190,
-      "s": 0.03217143,
+      "total_bonds": 11343,
+      "s": 0.03173636,
       "vps1": {
         "bonds": 4,
-        "spendable": 5.46908815,
-        "reward": 0.12868572,
+        "spendable": 5.40609991,
+        "reward": 0.12694544,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
-        "spendable": 4.46788469,
-        "reward": 0.09651429,
+        "spendable": 4.20413393,
+        "reward": 0.09520908,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.2252,
-      "combined_spendable": 9.93697284,
+      "combined_reward": 0.22215452,
+      "combined_spendable": 9.61023384,
       "real": false
     },
     {
       "epoch": 99,
-      "total_bonds": 11702,
-      "s": 0.03076343,
+      "total_bonds": 11878,
+      "s": 0.03030764,
       "vps1": {
         "bonds": 4,
-        "spendable": 0.15231686,
-        "reward": 0.12305373,
+        "spendable": 5.52733047,
+        "reward": 0.12123057,
+        "bonded_this_epoch": false
+      },
+      "vps2": {
+        "bonds": 3,
+        "spendable": 4.29505686,
+        "reward": 0.09092293,
+        "bonded_this_epoch": false
+      },
+      "combined_reward": 0.21215349,
+      "combined_spendable": 9.82238733,
+      "real": false
+    },
+    {
+      "epoch": 100,
+      "total_bonds": 12427,
+      "s": 0.02897015,
+      "vps1": {
+        "bonds": 4,
+        "spendable": 0.02517836,
+        "reward": 0.11588059,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 3,
         "spendable": 0.0,
-        "reward": 0.0922903,
+        "reward": 0.08691044,
         "bonded_this_epoch": true
       },
-      "combined_reward": 0.21534402,
-      "combined_spendable": 0.15231686,
-      "real": false
-    },
-    {
-      "epoch": 100,
-      "total_bonds": 12254,
-      "s": 0.02937851,
-      "vps1": {
-        "bonds": 4,
-        "spendable": 0.26983092,
-        "reward": 0.11751406,
-        "bonded_this_epoch": false
-      },
-      "vps2": {
-        "bonds": 4,
-        "spendable": 0.11751406,
-        "reward": 0.11751406,
-        "bonded_this_epoch": false
-      },
-      "combined_reward": 0.23502811,
-      "combined_spendable": 0.38734497,
+      "combined_reward": 0.20279103,
+      "combined_spendable": 0.02517836,
       "real": false
     },
     {
       "epoch": 101,
-      "total_bonds": 12815,
-      "s": 0.02809275,
+      "total_bonds": 13012,
+      "s": 0.02766596,
       "vps1": {
         "bonds": 4,
-        "spendable": 0.38220192,
-        "reward": 0.112371,
+        "spendable": 0.1358422,
+        "reward": 0.11066384,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 4,
-        "spendable": 0.22988506,
-        "reward": 0.112371,
+        "spendable": 0.11066384,
+        "reward": 0.11066384,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.224742,
-      "combined_spendable": 0.61208697,
+      "combined_reward": 0.22132768,
+      "combined_spendable": 0.24650604,
       "real": false
     },
     {
       "epoch": 102,
-      "total_bonds": 13419,
-      "s": 0.02682806,
+      "total_bonds": 13613,
+      "s": 0.02644504,
       "vps1": {
         "bonds": 4,
-        "spendable": 0.48951416,
-        "reward": 0.10731225,
+        "spendable": 0.24162238,
+        "reward": 0.10578018,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 4,
-        "spendable": 0.3371973,
-        "reward": 0.10731225,
+        "spendable": 0.21644402,
+        "reward": 0.10578018,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.21462449,
-      "combined_spendable": 0.82671147,
+      "combined_reward": 0.21156035,
+      "combined_spendable": 0.45806639,
       "real": false
     },
     {
       "epoch": 103,
-      "total_bonds": 14033,
-      "s": 0.02565392,
+      "total_bonds": 14255,
+      "s": 0.02525453,
       "vps1": {
         "bonds": 4,
-        "spendable": 0.59212984,
-        "reward": 0.10261568,
+        "spendable": 0.34264051,
+        "reward": 0.10101813,
         "bonded_this_epoch": false
       },
       "vps2": {
         "bonds": 4,
-        "spendable": 0.43981298,
-        "reward": 0.10261568,
+        "spendable": 0.31746215,
+        "reward": 0.10101813,
         "bonded_this_epoch": false
       },
-      "combined_reward": 0.20523136,
-      "combined_spendable": 1.03194282,
+      "combined_reward": 0.20203626,
+      "combined_spendable": 0.66010265,
+      "real": false
+    },
+    {
+      "epoch": 104,
+      "total_bonds": 14913,
+      "s": 0.02414003,
+      "vps1": {
+        "bonds": 4,
+        "spendable": 0.43920065,
+        "reward": 0.09656014,
+        "bonded_this_epoch": false
+      },
+      "vps2": {
+        "bonds": 4,
+        "spendable": 0.41402228,
+        "reward": 0.09656014,
+        "bonded_this_epoch": false
+      },
+      "combined_reward": 0.19312028,
+      "combined_spendable": 0.85322293,
       "real": false
     }
   ]
