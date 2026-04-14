@@ -1,10 +1,10 @@
 {
   "metadata": {
     "genesis": 12,
-    "anchor_epoch": 53,
+    "anchor_epoch": 61,
     "anchor_total_bonds": 5,
-    "target_epoch": 95,
-    "generated_at": "2026-04-14T21:54:04.672361+00:00",
+    "target_epoch": 103,
+    "generated_at": "2026-04-14T22:02:05.772227+00:00",
     "model": "dilution",
     "dilution_rate": 0.01
   },
@@ -104,11 +104,19 @@
       "accuracy_pct": 100.0,
       "vps1_bonds": 0,
       "vps2_bonds": 0
+    },
+    {
+      "epoch": 61,
+      "projected_bonds": 5,
+      "real_bonds": 5,
+      "accuracy_pct": 100.0,
+      "vps1_bonds": 0,
+      "vps2_bonds": 0
     }
   ],
   "epochs": [
     {
-      "epoch": 53,
+      "epoch": 61,
       "total_bonds": 5,
       "s": 72.0,
       "vps1": {
@@ -128,7 +136,7 @@
       "real": true
     },
     {
-      "epoch": 54,
+      "epoch": 62,
       "total_bonds": 5,
       "s": 71.28,
       "vps1": {
@@ -148,7 +156,7 @@
       "real": false
     },
     {
-      "epoch": 55,
+      "epoch": 63,
       "total_bonds": 5,
       "s": 70.5672,
       "vps1": {
@@ -168,7 +176,7 @@
       "real": false
     },
     {
-      "epoch": 56,
+      "epoch": 64,
       "total_bonds": 5,
       "s": 69.861528,
       "vps1": {
@@ -188,7 +196,7 @@
       "real": false
     },
     {
-      "epoch": 57,
+      "epoch": 65,
       "total_bonds": 5,
       "s": 69.16291272,
       "vps1": {
@@ -208,7 +216,7 @@
       "real": false
     },
     {
-      "epoch": 58,
+      "epoch": 66,
       "total_bonds": 5,
       "s": 68.47128359,
       "vps1": {
@@ -228,7 +236,7 @@
       "real": false
     },
     {
-      "epoch": 59,
+      "epoch": 67,
       "total_bonds": 5,
       "s": 67.78657076,
       "vps1": {
@@ -248,7 +256,7 @@
       "real": false
     },
     {
-      "epoch": 60,
+      "epoch": 68,
       "total_bonds": 5,
       "s": 67.10870505,
       "vps1": {
@@ -268,7 +276,7 @@
       "real": false
     },
     {
-      "epoch": 61,
+      "epoch": 69,
       "total_bonds": 5,
       "s": 66.437618,
       "vps1": {
@@ -288,7 +296,7 @@
       "real": false
     },
     {
-      "epoch": 62,
+      "epoch": 70,
       "total_bonds": 5,
       "s": 65.77324182,
       "vps1": {
@@ -308,7 +316,7 @@
       "real": false
     },
     {
-      "epoch": 63,
+      "epoch": 71,
       "total_bonds": 6,
       "s": 65.1155094,
       "vps1": {
@@ -328,7 +336,7 @@
       "real": false
     },
     {
-      "epoch": 64,
+      "epoch": 72,
       "total_bonds": 6,
       "s": 64.46435431,
       "vps1": {
@@ -348,7 +356,7 @@
       "real": false
     },
     {
-      "epoch": 65,
+      "epoch": 73,
       "total_bonds": 6,
       "s": 63.81971076,
       "vps1": {
@@ -368,7 +376,7 @@
       "real": false
     },
     {
-      "epoch": 66,
+      "epoch": 74,
       "total_bonds": 6,
       "s": 63.18151366,
       "vps1": {
@@ -388,7 +396,7 @@
       "real": false
     },
     {
-      "epoch": 67,
+      "epoch": 75,
       "total_bonds": 6,
       "s": 62.54969852,
       "vps1": {
@@ -408,7 +416,7 @@
       "real": false
     },
     {
-      "epoch": 68,
+      "epoch": 76,
       "total_bonds": 6,
       "s": 61.92420153,
       "vps1": {
@@ -428,7 +436,7 @@
       "real": false
     },
     {
-      "epoch": 69,
+      "epoch": 77,
       "total_bonds": 6,
       "s": 61.30495952,
       "vps1": {
@@ -448,7 +456,7 @@
       "real": false
     },
     {
-      "epoch": 70,
+      "epoch": 78,
       "total_bonds": 6,
       "s": 60.69190992,
       "vps1": {
@@ -468,7 +476,7 @@
       "real": false
     },
     {
-      "epoch": 71,
+      "epoch": 79,
       "total_bonds": 6,
       "s": 60.08499082,
       "vps1": {
@@ -488,7 +496,7 @@
       "real": false
     },
     {
-      "epoch": 72,
+      "epoch": 80,
       "total_bonds": 6,
       "s": 59.48414092,
       "vps1": {
@@ -508,7 +516,7 @@
       "real": false
     },
     {
-      "epoch": 73,
+      "epoch": 81,
       "total_bonds": 6,
       "s": 58.88929951,
       "vps1": {
@@ -528,7 +536,7 @@
       "real": false
     },
     {
-      "epoch": 74,
+      "epoch": 82,
       "total_bonds": 6,
       "s": 58.30040651,
       "vps1": {
@@ -548,7 +556,7 @@
       "real": false
     },
     {
-      "epoch": 75,
+      "epoch": 83,
       "total_bonds": 6,
       "s": 57.71740245,
       "vps1": {
@@ -568,7 +576,7 @@
       "real": false
     },
     {
-      "epoch": 76,
+      "epoch": 84,
       "total_bonds": 6,
       "s": 57.14022842,
       "vps1": {
@@ -588,7 +596,7 @@
       "real": false
     },
     {
-      "epoch": 77,
+      "epoch": 85,
       "total_bonds": 6,
       "s": 56.56882614,
       "vps1": {
@@ -608,7 +616,7 @@
       "real": false
     },
     {
-      "epoch": 78,
+      "epoch": 86,
       "total_bonds": 6,
       "s": 56.00313788,
       "vps1": {
@@ -628,7 +636,7 @@
       "real": false
     },
     {
-      "epoch": 79,
+      "epoch": 87,
       "total_bonds": 6,
       "s": 55.4431065,
       "vps1": {
@@ -648,7 +656,7 @@
       "real": false
     },
     {
-      "epoch": 80,
+      "epoch": 88,
       "total_bonds": 7,
       "s": 54.88867543,
       "vps1": {
@@ -668,7 +676,7 @@
       "real": false
     },
     {
-      "epoch": 81,
+      "epoch": 89,
       "total_bonds": 7,
       "s": 54.33978868,
       "vps1": {
@@ -688,7 +696,7 @@
       "real": false
     },
     {
-      "epoch": 82,
+      "epoch": 90,
       "total_bonds": 7,
       "s": 53.79639079,
       "vps1": {
@@ -708,7 +716,7 @@
       "real": false
     },
     {
-      "epoch": 83,
+      "epoch": 91,
       "total_bonds": 7,
       "s": 53.25842688,
       "vps1": {
@@ -728,7 +736,7 @@
       "real": false
     },
     {
-      "epoch": 84,
+      "epoch": 92,
       "total_bonds": 7,
       "s": 52.72584262,
       "vps1": {
@@ -748,7 +756,7 @@
       "real": false
     },
     {
-      "epoch": 85,
+      "epoch": 93,
       "total_bonds": 7,
       "s": 52.19858419,
       "vps1": {
@@ -768,7 +776,7 @@
       "real": false
     },
     {
-      "epoch": 86,
+      "epoch": 94,
       "total_bonds": 7,
       "s": 51.67659835,
       "vps1": {
@@ -788,7 +796,7 @@
       "real": false
     },
     {
-      "epoch": 87,
+      "epoch": 95,
       "total_bonds": 7,
       "s": 51.15983236,
       "vps1": {
@@ -808,7 +816,7 @@
       "real": false
     },
     {
-      "epoch": 88,
+      "epoch": 96,
       "total_bonds": 7,
       "s": 50.64823404,
       "vps1": {
@@ -828,7 +836,7 @@
       "real": false
     },
     {
-      "epoch": 89,
+      "epoch": 97,
       "total_bonds": 7,
       "s": 50.1417517,
       "vps1": {
@@ -848,7 +856,7 @@
       "real": false
     },
     {
-      "epoch": 90,
+      "epoch": 98,
       "total_bonds": 7,
       "s": 49.64033418,
       "vps1": {
@@ -868,7 +876,7 @@
       "real": false
     },
     {
-      "epoch": 91,
+      "epoch": 99,
       "total_bonds": 7,
       "s": 49.14393084,
       "vps1": {
@@ -888,7 +896,7 @@
       "real": false
     },
     {
-      "epoch": 92,
+      "epoch": 100,
       "total_bonds": 7,
       "s": 48.65249153,
       "vps1": {
@@ -908,7 +916,7 @@
       "real": false
     },
     {
-      "epoch": 93,
+      "epoch": 101,
       "total_bonds": 7,
       "s": 48.16596662,
       "vps1": {
@@ -928,7 +936,7 @@
       "real": false
     },
     {
-      "epoch": 94,
+      "epoch": 102,
       "total_bonds": 8,
       "s": 47.68430695,
       "vps1": {
@@ -948,7 +956,7 @@
       "real": false
     },
     {
-      "epoch": 95,
+      "epoch": 103,
       "total_bonds": 8,
       "s": 47.20746388,
       "vps1": {
