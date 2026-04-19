@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-DOLI Epoch Simulation Engine — Balance-Based Projection
+DOLI Epoch Simulation Engine — VPS1-only, Balance-Based Projection
 
-Projects bond timing by tracking spendable balances forward using
+Projects bond timing by tracking VPS1 spendable balance forward using
 current share value and observed dilution rate.
 
 Core formula: s = 360 / total_bonds
@@ -34,7 +34,6 @@ class ProducerState:
         return reward
 
     def try_bond(self) -> bool:
-        """Check if this producer can bond using only its own spendable."""
         self.bonded_this_epoch = False
         if self.spendable >= BOND_THRESHOLD:
             self.spendable -= BOND_COST
@@ -53,19 +52,14 @@ class SimConfig:
     model: str = "dilution"
 
     # Accumulate/burst dilution — derived from classify_epoch_growth()
-    accumulate_dilution: float = 0.0  # per-epoch dilution in accumulate phase
-    burst_dilution: float = 0.0       # per-epoch dilution in burst phase
-    anchor_phase: str = ""            # "accumulate" or "burst" — phase of anchor epoch
+    accumulate_dilution: float = 0.0
+    burst_dilution: float = 0.0
+    anchor_phase: str = ""  # "accumulate" or "burst"
 
     vps1_bonds: int = 3
     vps1_spendable: float = 0.76
-    vps2_bonds: int = 2
-    vps2_spendable: float = 0.90
 
-    # Bond priority: which VPS to bond first when both have equal bonds
-    bond_priority: str = "vps1"
-
-    genesis: int = 1  # genesis number — increments on network reset
+    genesis: int = 1
 
     accuracy_log: list = field(default_factory=list)
 
@@ -75,18 +69,7 @@ class SimConfig:
 
 
 def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dict:
-    """Analyze real bond deltas to classify epochs as accumulate or burst.
-
-    Structural nodes alternate between accumulate (~35 bonds/epoch across 6 nodes)
-    and burst (~70 bonds/epoch) growth. This function extracts those weights from
-    observed data using k=2 clustering on epoch-to-epoch bond deltas.
-
-    Returns dict with:
-        epochs: list of {epoch, delta, type, bonds} per transition
-        accumulate_weight: mean delta for accumulate epochs
-        burst_weight: mean delta for burst epochs
-        pattern: string like "AABBAB..." showing the sequence
-    """
+    """Analyze real bond deltas to classify epochs as accumulate or burst."""
     real_entries = [
         e for e in accuracy_log
         if "real_bonds" in e and e.get("accuracy_pct", 0) >= min_accuracy
@@ -96,19 +79,18 @@ def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dic
     if len(real_entries) < 3:
         return {"epochs": [], "accumulate_weight": 35, "burst_weight": 70, "pattern": ""}
 
-    # Compute deltas and per-epoch dilution between consecutive epochs only
     deltas = []
     for i in range(1, len(real_entries)):
         prev, curr = real_entries[i - 1], real_entries[i]
         gap = curr["epoch"] - prev["epoch"]
         if gap != 1:
-            continue  # skip non-consecutive (poisoned epochs removed gaps)
+            continue
         delta = curr["real_bonds"] - prev["real_bonds"]
         if delta <= 0:
-            continue  # bonds can't shrink — measurement error
+            continue
         s_prev = BLOCKS_PER_EPOCH / prev["real_bonds"]
         s_curr = BLOCKS_PER_EPOCH / curr["real_bonds"]
-        dilution = 1 - (s_curr / s_prev)  # how much s shrank this epoch
+        dilution = 1 - (s_curr / s_prev)
         deltas.append({
             "epoch": curr["epoch"],
             "delta": delta,
@@ -120,8 +102,6 @@ def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dic
     if len(deltas) < 3:
         return {"epochs": deltas, "accumulate_weight": 35, "burst_weight": 70, "pattern": ""}
 
-    # k=2 clustering via iterative k-means on deltas.
-    # Filter extreme outliers first (IQR fence), then converge two centroids.
     vals = sorted(d["delta"] for d in deltas)
     q1 = vals[len(vals) // 4]
     q3 = vals[3 * len(vals) // 4]
@@ -131,9 +111,8 @@ def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dic
     clean_vals = [v for v in vals if fence_lo <= v <= fence_hi]
 
     if len(clean_vals) < 3:
-        clean_vals = vals  # not enough after filtering, use all
+        clean_vals = vals
 
-    # Initialize centroids at 1/3 and 2/3 percentile of clean data
     c_lo = clean_vals[len(clean_vals) // 3]
     c_hi = clean_vals[2 * len(clean_vals) // 3]
 
@@ -151,7 +130,6 @@ def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dic
 
     threshold = (c_lo + c_hi) / 2
 
-    # Classify and compute weights (including outliers, classified by threshold)
     accum_vals, burst_vals = [], []
     for d in deltas:
         if d["delta"] <= threshold:
@@ -163,7 +141,6 @@ def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dic
 
     accum_weight = sum(accum_vals) / len(accum_vals) if accum_vals else 35
     burst_weight = sum(burst_vals) / len(burst_vals) if burst_vals else 70
-
     pattern = "".join("A" if d["type"] == "accumulate" else "B" for d in deltas)
 
     return {
@@ -176,12 +153,10 @@ def classify_epoch_growth(accuracy_log: list, min_accuracy: float = 90.0) -> dic
 
 
 def compute_dilution_rate(accuracy_log: list) -> float:
-    """Derive per-epoch dilution rate from real bond data.
-    Uses geometric mean across the full span for stability.
-    Returns fraction by which s decreases each epoch."""
+    """Derive per-epoch dilution rate from real bond data (geometric mean)."""
     real_entries = [e for e in accuracy_log if "real_bonds" in e]
     if len(real_entries) < 2:
-        return 0.03  # default
+        return 0.03
 
     points = sorted(real_entries, key=lambda e: e["epoch"])
     first = points[0]
@@ -195,13 +170,12 @@ def compute_dilution_rate(accuracy_log: list) -> float:
     s_last = BLOCKS_PER_EPOCH / last["real_bonds"]
 
     if s_last >= s_first:
-        return 0.01  # no dilution observed, use minimal default
+        return 0.01
 
-    # Geometric mean: (s_last/s_first)^(1/span) gives the per-epoch multiplier
     per_epoch_ratio = (s_last / s_first) ** (1 / epoch_span)
     dilution = 1 - per_epoch_ratio
 
-    return max(0.005, min(dilution, 0.15))  # clamp to reasonable range
+    return max(0.005, min(dilution, 0.15))
 
 
 def simulate(config: Optional[SimConfig] = None) -> dict:
@@ -209,14 +183,12 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
         config = SimConfig()
 
     vps1 = ProducerState("VPS1", config.vps1_bonds, config.vps1_spendable)
-    vps2 = ProducerState("VPS2", config.vps2_bonds, config.vps2_spendable)
 
     s = config.anchor_s if config.anchor_s > 0 else BLOCKS_PER_EPOCH / config.anchor_total_bonds
     total_bonds = config.anchor_total_bonds
 
     epochs = []
     vps1_pending_bond = False
-    vps2_pending_bond = False
 
     for epoch in range(config.anchor_epoch, config.target_epoch + 1):
         offset = epoch - config.anchor_epoch
@@ -224,16 +196,9 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
         if vps1_pending_bond:
             vps1.bonds += 1
             vps1_pending_bond = False
-        if vps2_pending_bond:
-            vps2.bonds += 1
-            vps2_pending_bond = False
 
-        # Apply dilution after anchor epoch
         if offset > 0:
             if config.has_dual_dilution:
-                # Alternate accumulate/burst from anchor phase
-                # anchor_phase tells us what the anchor epoch was;
-                # offset 1 is the NEXT epoch, so it flips
                 if config.anchor_phase == "accumulate":
                     rate = config.burst_dilution if offset % 2 == 1 else config.accumulate_dilution
                 else:
@@ -246,53 +211,18 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
         # Don't earn on anchor epoch — spendable already reflects current state
         if offset == 0:
             vps1_reward = 0.0
-            vps2_reward = 0.0
         else:
             vps1_reward = vps1.earn(s)
-            vps2_reward = vps2.earn(s)
 
-        # Combined pool bonding: bond the VPS with fewer bonds first
-        # (if equal, use priority setting). Transfer between wallets as needed.
-        combined = vps1.spendable + vps2.spendable
         vps1.bonded_this_epoch = False
-        vps2.bonded_this_epoch = False
-
-        if combined >= BOND_THRESHOLD:
-            # Decide who bonds: fewer bonds first, priority breaks ties
-            if vps1.bonds < vps2.bonds:
-                first, second = vps1, vps2
-            elif vps2.bonds < vps1.bonds:
-                first, second = vps2, vps1
-            elif config.bond_priority == "vps1":
-                first, second = vps1, vps2
-            else:
-                first, second = vps2, vps1
-
-            # Bond first using combined pool
-            deficit = BOND_COST - first.spendable
-            if deficit > 0:
-                transfer = min(deficit, second.spendable)
-                second.spendable -= transfer
-                first.spendable += transfer
-            if first.spendable >= BOND_COST:
-                first.spendable -= BOND_COST
-                first.bonded_this_epoch = True
-
-            # Check if second can also bond with remaining
-            if first.spendable + second.spendable >= BOND_THRESHOLD:
-                deficit2 = BOND_COST - second.spendable
-                if deficit2 > 0:
-                    transfer2 = min(deficit2, first.spendable)
-                    first.spendable -= transfer2
-                    second.spendable += transfer2
-                if second.spendable >= BOND_COST:
-                    second.spendable -= BOND_COST
-                    second.bonded_this_epoch = True
+        if vps1.spendable >= BOND_THRESHOLD:
+            vps1.spendable -= BOND_COST
+            vps1.bonded_this_epoch = True
 
         if vps1.bonded_this_epoch:
             vps1_pending_bond = True
-        if vps2.bonded_this_epoch:
-            vps2_pending_bond = True
+
+        need_to_bond = max(0.0, BOND_THRESHOLD - vps1.spendable)
 
         epoch_data = {
             "epoch": epoch,
@@ -303,15 +233,8 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
                 "spendable": round(vps1.spendable, 8),
                 "reward": round(vps1_reward, 8),
                 "bonded_this_epoch": vps1.bonded_this_epoch,
+                "need_to_bond": round(need_to_bond, 8),
             },
-            "vps2": {
-                "bonds": vps2.bonds,
-                "spendable": round(vps2.spendable, 8),
-                "reward": round(vps2_reward, 8),
-                "bonded_this_epoch": vps2.bonded_this_epoch,
-            },
-            "combined_reward": round(vps1_reward + vps2_reward, 8),
-            "combined_spendable": round(vps1.spendable + vps2.spendable, 8),
             "real": (offset == 0),
         }
         epochs.append(epoch_data)
@@ -330,50 +253,42 @@ def simulate(config: Optional[SimConfig] = None) -> dict:
         metadata["burst_dilution"] = round(config.burst_dilution, 6)
         metadata["anchor_phase"] = config.anchor_phase
 
-    output = {
+    return {
         "metadata": metadata,
         "accuracy_log": config.accuracy_log,
         "epochs": epochs,
     }
-
-    return output
 
 
 def generate_markdown(data: dict) -> str:
     meta = data["metadata"]
 
     lines = [
-        "# DOLI Epoch Projections — Dilution Model",
+        "# DOLI Epoch Projections — VPS1",
         "",
         f"**Anchor:** E{meta['anchor_epoch']} ({meta['anchor_total_bonds']} bonds)",
         f"**Generated:** {meta['generated_at']}",
         f"**Model:** {meta['model']}",
         f"**Dilution rate:** {meta.get('dilution_rate', '?')} per epoch",
         "",
-        "| Epoch | Total bonds | s | VPS1 bonds | VPS1 spendable | VPS2 bonds | VPS2 spendable | Combined reward | Bond events | Real |",
-        "|------:|------------:|------:|-----------:|---------------:|-----------:|---------------:|----------------:|:------------|:----:|",
+        "| Epoch | Net bonds | s | VPS1 bonds | Spendable | Reward | Need to bond | Event | Real |",
+        "|------:|----------:|------:|-----------:|----------:|-------:|-------------:|:------|:----:|",
     ]
 
     for e in data["epochs"]:
         v1 = e["vps1"]
-        v2 = e["vps2"]
-        events = []
-        if v1["bonded_this_epoch"]:
-            events.append("VPS1 bonds")
-        if v2["bonded_this_epoch"]:
-            events.append("VPS2 bonds")
-        event_str = ", ".join(events) if events else "-"
+        event_str = "BOND" if v1["bonded_this_epoch"] else "-"
         real_str = "Y" if e.get("real") else "-"
+        need = v1.get("need_to_bond", max(0.0, BOND_THRESHOLD - v1["spendable"]))
 
         lines.append(
             f"| {e['epoch']:>5} "
-            f"| {e['total_bonds']:>11} "
+            f"| {e['total_bonds']:>9} "
             f"| {e['s']:>5.4f} "
             f"| {v1['bonds']:>10} "
-            f"| {v1['spendable']:>14.4f} "
-            f"| {v2['bonds']:>10} "
-            f"| {v2['spendable']:>14.4f} "
-            f"| {e['combined_reward']:>15.4f} "
+            f"| {v1['spendable']:>9.4f} "
+            f"| {v1['reward']:>6.4f} "
+            f"| {need:>12.4f} "
             f"| {event_str} "
             f"| {real_str} |"
         )
@@ -383,19 +298,17 @@ def generate_markdown(data: dict) -> str:
             "",
             "## Accuracy Log",
             "",
-            "| Epoch | Projected bonds | Real bonds | Accuracy % | VPS1 bonds | VPS2 bonds |",
-            "|------:|----------------:|-----------:|-----------:|-----------:|-----------:|",
+            "| Epoch | Projected bonds | Real bonds | Accuracy % | VPS1 bonds |",
+            "|------:|----------------:|-----------:|-----------:|-----------:|",
         ])
         for entry in data["accuracy_log"]:
             v1b = entry.get("vps1_bonds", "-")
-            v2b = entry.get("vps2_bonds", "-")
             lines.append(
                 f"| {entry['epoch']:>5} "
                 f"| {entry['projected_bonds']:>15} "
                 f"| {entry['real_bonds']:>10} "
                 f"| {entry['accuracy_pct']:>10.1f} "
-                f"| {str(v1b):>10} "
-                f"| {str(v2b):>10} |"
+                f"| {str(v1b):>10} |"
             )
 
     lines.append("")

@@ -84,20 +84,38 @@ def get_total_bonds() -> tuple[int, int]:
     return total_bonds, len(producers)
 
 
-def get_balance(address: str) -> tuple[float, int]:
-    """Returns (spendable_doli, bond_count).
-    Assumes bonded field is in base units (same as confirmed).
+def get_balance_from_cli() -> tuple[float, int]:
+    """Parse `doli balance` CLI output. Returns (spendable_doli, bond_count).
+
+    Example output:
+        Balances:
+        ------------------------------------------------------------
+        doli1abc... (primary)
+          Spendable: 6.48042970 DOLI
+          Bonded:    120.00000000 DOLI  (producer bond)
+          Total:     126.48042970 DOLI
     """
-    bal = rpc_call("getBalance", {"address": address})
-    spendable = bal["confirmed"] / BASE_UNITS
-    bonded_raw = bal["bonded"]
-    bond_count = int(bonded_raw // (10 * BASE_UNITS))
-    # Sanity check: if bonded > 0 but bond_count is 0 or unreasonably high,
-    # the RPC format assumption may be wrong
-    if bonded_raw > 0 and (bond_count == 0 or bond_count > 500):
-        log.error(f"Suspect bond_count={bond_count} from bonded={bonded_raw} — "
-                  f"verify RPC 'bonded' field format (base units vs DOLI float)")
-        raise RuntimeError(f"Bond count sanity check failed: bonded={bonded_raw}, derived count={bond_count}")
+    result = subprocess.run(
+        ["doli", "balance"],
+        capture_output=True, text=True, timeout=15,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"doli balance failed: {result.stderr.strip()}")
+
+    spendable = None
+    bonded_doli = None
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("Spendable:"):
+            spendable = float(line.split(":")[1].strip().split()[0])
+        elif line.startswith("Bonded:"):
+            bonded_doli = float(line.split(":")[1].strip().split()[0])
+
+    if spendable is None or bonded_doli is None:
+        raise RuntimeError(f"Could not parse doli balance output:\n{result.stdout}")
+
+    bond_count = int(round(bonded_doli / 10.0))
+    log.info(f"doli balance: spendable={spendable:.8f} bonded={bonded_doli:.8f} => {bond_count} bonds")
     return spendable, bond_count
 
 
@@ -146,10 +164,10 @@ def git_cmd(*args) -> str:
 
 
 def git_commit_and_push(epoch: int, total_bonds: int, s: float,
-                         accuracy: float, vps1_bonds: int, vps2_bonds: int):
+                         accuracy: float, vps1_bonds: int, vps1_spendable: float):
     """Commit projections and push to GitHub. Pulls first to avoid rejection."""
     msg = (f"E{epoch} | bonds={total_bonds} | s={s:.4f} "
-           f"| acc={accuracy:.1f}% | vps1={vps1_bonds}b vps2={vps2_bonds}b")
+           f"| acc={accuracy:.1f}% | vps1={vps1_bonds}b spend={vps1_spendable:.4f}")
 
     # Sync with remote before committing our changes
     # Stash our generated files, pull, then pop and commit
@@ -273,55 +291,40 @@ def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
         log.error(f"Failed to fetch total bonds: {e}")
         return
 
-    # Fetch VPS balances (both from local RPC — chain knows all)
+    # --- VPS1 balance: use doli balance CLI (authoritative: exact bonds + spendable) ---
     try:
-        vps1_spendable, vps1_bonds = get_balance(VPS1_ADDRESS)
+        vps1_spendable, vps1_bonds = get_balance_from_cli()
         log.info(f"VPS1: {vps1_bonds} bonds, {vps1_spendable:.8f} spendable")
     except Exception as e:
-        log.error(f"Failed to fetch VPS1 balance: {e}")
+        log.error(f"Failed to fetch VPS1 balance from CLI: {e}")
         return
 
     # --- Measurement 2: reward-derived bond count ---
-    # Reward was earned during the PREVIOUS epoch, so we need the bond count
-    # from that epoch. Check if the producer bonded this epoch (spendable < 1
-    # and previous projection had more spendable) as a heuristic.
     prev_epoch_bonds = vps1_bonds
     if prev_data:
         for e in prev_data["epochs"]:
             if e["epoch"] == epoch - 1:
                 prev_epoch_bonds = e["vps1"]["bonds"]
                 break
-            elif e["epoch"] == epoch:
-                # If current epoch entry exists, check previous
-                prev_epoch_bonds = e["vps1"]["bonds"]
-                break
-    # If VPS1 bonded this epoch, previous epoch had one fewer bond
-    if vps1_bonds > prev_epoch_bonds:
-        prev_epoch_bonds_for_reward = prev_epoch_bonds
-    else:
-        prev_epoch_bonds_for_reward = vps1_bonds
+
+    prev_epoch_bonds_for_reward = prev_epoch_bonds if vps1_bonds > prev_epoch_bonds else vps1_bonds
 
     reward_amount, reward_derived_bonds = get_epoch_reward_from_history(
         VPS1_ADDRESS, prev_epoch_bonds_for_reward,
     )
     if reward_derived_bonds is not None:
         log.info(f"Reward-derived bonds: {reward_derived_bonds} "
-                 f"(reward={reward_amount:.8f}, "
-                 f"using {prev_epoch_bonds_for_reward} bonds from prev epoch, "
-                 f"s={reward_amount/prev_epoch_bonds_for_reward:.8f})")
+                 f"(reward={reward_amount:.8f}, s={reward_amount/prev_epoch_bonds_for_reward:.8f})")
     else:
         log.warning("Could not derive bonds from reward — using snapshot only")
 
-    # --- Reconcile: reward-derived is exact ONLY if producer had full liveness.
-    # If reward was reduced (attestation <100%), reward-derived inflates bond count.
-    # Detect this: if reward-derived > snapshot by >10%, producer likely had liveness
-    # issues → use snapshot. Otherwise trust reward-derived (snapshot includes pending). ---
+    # Reconcile snapshot vs reward-derived. Reward-derived inflates if liveness < 100%.
     if reward_derived_bonds is not None:
         if reward_derived_bonds != snapshot_bonds:
             diff_pct = abs(snapshot_bonds - reward_derived_bonds) / max(snapshot_bonds, reward_derived_bonds) * 100
             if reward_derived_bonds > snapshot_bonds * 1.10:
                 log.warning(f"Bond count: snapshot={snapshot_bonds} vs reward-derived={reward_derived_bonds} "
-                            f"(diff={diff_pct:.1f}%) — reward-derived inflated, likely liveness issue — using snapshot")
+                            f"(diff={diff_pct:.1f}%) — liveness issue suspected — using snapshot")
                 total_bonds = snapshot_bonds
             else:
                 log.info(f"Bond count: snapshot={snapshot_bonds} vs reward-derived={reward_derived_bonds} "
@@ -330,17 +333,10 @@ def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
         else:
             total_bonds = reward_derived_bonds
     else:
-        total_bonds = snapshot_bonds  # fallback to snapshot
+        total_bonds = snapshot_bonds
 
     real_s = BLOCKS_PER_EPOCH / total_bonds
     log.info(f"Final bonds: {total_bonds} — s = {real_s:.4f}")
-
-    try:
-        vps2_spendable, vps2_bonds = get_balance(VPS2_ADDRESS)
-        log.info(f"VPS2: {vps2_bonds} bonds, {vps2_spendable:.8f} spendable")
-    except Exception as e:
-        log.error(f"Failed to fetch VPS2 balance: {e} — skipping regeneration to avoid corrupting model")
-        return
 
     # Build accuracy log
     accuracy_log = prev_data.get("accuracy_log", []) if prev_data else []
@@ -361,7 +357,6 @@ def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
                 "real_bonds": total_bonds,
                 "accuracy_pct": round(accuracy_pct, 1),
                 "vps1_bonds": vps1_bonds,
-                "vps2_bonds": vps2_bonds,
             })
             log.info(f"Projected: {projected_bonds} — accuracy: {accuracy_pct:.1f}%")
             if accuracy_pct < 95:
@@ -373,7 +368,6 @@ def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
                 "real_bonds": total_bonds,
                 "accuracy_pct": 100.0,
                 "vps1_bonds": vps1_bonds,
-                "vps2_bonds": vps2_bonds,
             })
     else:
         accuracy_log.append({
@@ -382,7 +376,6 @@ def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
             "real_bonds": total_bonds,
             "accuracy_pct": 100.0,
             "vps1_bonds": vps1_bonds,
-            "vps2_bonds": vps2_bonds,
         })
 
     # Compute dilution rates from real data
@@ -423,8 +416,6 @@ def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
         anchor_phase=anchor_phase,
         vps1_bonds=vps1_bonds,
         vps1_spendable=vps1_spendable,
-        vps2_bonds=vps2_bonds,
-        vps2_spendable=vps2_spendable,
         accuracy_log=accuracy_log,
         genesis=genesis,
     )
@@ -438,7 +429,7 @@ def process_new_epoch(epoch: int, prev_data: dict | None, genesis: int = 1):
     try:
         git_commit_and_push(
             epoch, total_bonds, real_s, accuracy_pct,
-            vps1_bonds, vps2_bonds,
+            vps1_bonds, vps1_spendable,
         )
     except Exception as e:
         log.error(f"Git commit/push failed: {e}")

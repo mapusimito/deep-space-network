@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DOLI Projection Query Interface
+DOLI Projection Query Interface — VPS1
 
 Natural language CLI for querying epoch projections and recalibrating
 the simulation model with real data.
@@ -8,12 +8,10 @@ the simulation model with real data.
 Usage:
     python query.py "when does vps1 next bond"
     python query.py "what is s at epoch 25"
-    python query.py "combined reward at epoch 30"
-    python query.py "how many bonds do we have at epoch 40"
-    python query.py "when do we reach 5 bonds each"
-    python query.py "accuracy check e19 actual_bonds=670"
-    python query.py "recalibrate e19 total_bonds=670"
+    python query.py "reward at epoch 30"
+    python query.py "how many bonds at epoch 40"
     python query.py "summary"
+    python query.py "recalibrate e80 total_bonds=2757 vps1_bonds=12 vps1_spendable=6.48"
 """
 
 import json
@@ -51,37 +49,18 @@ def parse_epoch_num(text: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def handle_when_bond(query: str, data: dict) -> str:
+def handle_when_bond(data: dict) -> str:
     current_epoch = data["metadata"]["anchor_epoch"]
-
-    if "vps1" in query or "mapusisimito" in query:
-        key, name = "vps1", "VPS1"
-    elif "vps2" in query or "df80f5d70af4" in query:
-        key, name = "vps2", "VPS2"
-    else:
-        results = []
-        for e in data["epochs"]:
-            if e["epoch"] <= current_epoch:
-                continue
-            if e["vps1"]["bonded_this_epoch"]:
-                results.append(f"VPS1 bonds at E{e['epoch']} (bonds -> {e['vps1']['bonds']+1})")
-                break
-        for e in data["epochs"]:
-            if e["epoch"] <= current_epoch:
-                continue
-            if e["vps2"]["bonded_this_epoch"]:
-                results.append(f"VPS2 bonds at E{e['epoch']} (bonds -> {e['vps2']['bonds']+1})")
-                break
-        return "\n".join(results) if results else "No bonding events projected."
-
     for e in data["epochs"]:
         if e["epoch"] <= current_epoch:
             continue
-        if e[key]["bonded_this_epoch"]:
-            bonds_after = e[key]["bonds"] + 1
-            return f"{name} next bonds at E{e['epoch']} (will have {bonds_after} bonds effective E{e['epoch']+1})"
-
-    return f"No bonding event projected for {name} in range."
+        if e["vps1"]["bonded_this_epoch"]:
+            bonds_after = e["vps1"]["bonds"] + 1
+            spendable_now = e["vps1"]["spendable"]
+            return (f"VPS1 next bonds at E{e['epoch']} "
+                    f"(will have {bonds_after} bonds effective E{e['epoch']+1}; "
+                    f"spendable after bond: {spendable_now:.8f})")
+    return "No bonding event projected in range."
 
 
 def handle_s_at_epoch(query: str, data: dict) -> str:
@@ -102,13 +81,13 @@ def handle_reward_at_epoch(query: str, data: dict) -> str:
     e = get_epoch(data, epoch_num)
     if e is None:
         return f"Epoch {epoch_num} not in projection range."
-    v1, v2 = e["vps1"], e["vps2"]
+    v1 = e["vps1"]
     real_tag = " [REAL]" if e.get("real") else ""
     return (
-        f"E{epoch_num} rewards (s = {e['s']:.4f}, total_bonds = {e['total_bonds']}){real_tag}:\n"
+        f"E{epoch_num} (s = {e['s']:.4f}, net_bonds = {e['total_bonds']}){real_tag}:\n"
         f"  VPS1: {v1['reward']:.8f} DOLI ({v1['bonds']} bonds)\n"
-        f"  VPS2: {v2['reward']:.8f} DOLI ({v2['bonds']} bonds)\n"
-        f"  Combined: {e['combined_reward']:.8f} DOLI"
+        f"  Spendable after: {v1['spendable']:.8f} DOLI\n"
+        f"  Still needs to bond: {v1.get('need_to_bond', 0):.8f} DOLI"
     )
 
 
@@ -119,31 +98,10 @@ def handle_bonds_at_epoch(query: str, data: dict) -> str:
     e = get_epoch(data, epoch_num)
     if e is None:
         return f"Epoch {epoch_num} not in projection range."
-    v1, v2 = e["vps1"], e["vps2"]
-    total_ours = v1["bonds"] + v2["bonds"]
-    return (f"E{epoch_num}: VPS1 = {v1['bonds']} bonds, VPS2 = {v2['bonds']} bonds, "
-            f"combined = {total_ours} bonds (network = {e['total_bonds']})")
-
-
-def handle_when_reach(query: str, data: dict) -> str:
-    m = re.search(r'(\d+)\s*bonds?\s*(each|total|combined)?', query, re.IGNORECASE)
-    if not m:
-        return "Could not parse target bond count."
-    target = int(m.group(1))
-    mode = (m.group(2) or "each").lower()
-
-    for e in data["epochs"]:
-        v1, v2 = e["vps1"], e["vps2"]
-        if mode == "each":
-            if v1["bonds"] >= target and v2["bonds"] >= target:
-                return (f"Both VPS reach {target} bonds each at E{e['epoch']} "
-                        f"(VPS1={v1['bonds']}, VPS2={v2['bonds']})")
-        elif mode in ("total", "combined"):
-            if v1["bonds"] + v2["bonds"] >= target:
-                return (f"Combined {target} bonds reached at E{e['epoch']} "
-                        f"(VPS1={v1['bonds']}, VPS2={v2['bonds']})")
-
-    return f"Target of {target} bonds ({mode}) not reached in projection range."
+    v1 = e["vps1"]
+    return (f"E{epoch_num}: VPS1 = {v1['bonds']} bonds, "
+            f"spendable = {v1['spendable']:.8f}, "
+            f"network = {e['total_bonds']} bonds")
 
 
 def handle_accuracy_check(query: str, data: dict) -> str:
@@ -176,7 +134,7 @@ def handle_recalibrate(query: str, data: dict) -> str:
     epoch_num = parse_epoch_num(query)
     m_bonds = re.search(r'total_bonds\s*=\s*(\d+)', query, re.IGNORECASE)
     if epoch_num is None or m_bonds is None:
-        return "Usage: recalibrate eX total_bonds=Y [vps1_bonds=A] [vps1_spendable=B] [vps2_bonds=C] [vps2_spendable=D]"
+        return "Usage: recalibrate eX total_bonds=Y [vps1_bonds=A] [vps1_spendable=B]"
 
     real_total_bonds = int(m_bonds.group(1))
     old_epoch = get_epoch(data, epoch_num)
@@ -194,46 +152,39 @@ def handle_recalibrate(query: str, data: dict) -> str:
 
     vps1_bonds = _parse_kv(query, "vps1_bonds", int)
     vps1_spendable = _parse_kv(query, "vps1_spendable", float)
-    vps2_bonds = _parse_kv(query, "vps2_bonds", int)
-    vps2_spendable = _parse_kv(query, "vps2_spendable", float)
 
     if old_epoch:
-        v1, v2 = old_epoch["vps1"], old_epoch["vps2"]
+        v1 = old_epoch["vps1"]
         if vps1_bonds is None: vps1_bonds = v1["bonds"]
         if vps1_spendable is None: vps1_spendable = v1["spendable"]
-        if vps2_bonds is None: vps2_bonds = v2["bonds"]
-        if vps2_spendable is None: vps2_spendable = v2["spendable"]
 
-    # Recalculate structural growth if enough data
-    old_meta = data["metadata"]
-    sg = old_meta.get("structural_growth", {})
-    new_accumulate = sg.get("accumulate_epoch", 35)
-    new_burst = sg.get("burst_epoch", 70)
+    from simulate import compute_dilution_rate, classify_epoch_growth, BLOCKS_PER_EPOCH
+    dilution_rate = compute_dilution_rate(accuracy_log)
+    growth = classify_epoch_growth(accuracy_log)
+    accum_dilution = 0.0
+    burst_dilution = 0.0
+    anchor_phase = ""
+    if len(growth["epochs"]) >= 4:
+        accum_epochs = [e for e in growth["epochs"] if e["type"] == "accumulate"]
+        burst_epochs = [e for e in growth["epochs"] if e["type"] == "burst"]
+        if accum_epochs and burst_epochs:
+            accum_dilution = sum(e["dilution"] for e in accum_epochs) / len(accum_epochs)
+            burst_dilution = sum(e["dilution"] for e in burst_epochs) / len(burst_epochs)
+            anchor_phase = growth["epochs"][-1]["type"]
 
-    if len(accuracy_log) >= 3:
-        recent = accuracy_log[-4:]
-        growths = []
-        for i in range(1, len(recent)):
-            ed = recent[i]["epoch"] - recent[i-1]["epoch"]
-            bd = recent[i]["real_bonds"] - recent[i-1]["real_bonds"]
-            if ed > 0:
-                growths.append(bd / ed)
-        if len(growths) >= 2:
-            avg = sum(growths) / len(growths)
-            base = avg / 1.5
-            new_accumulate = max(1, int(round(base)))
-            new_burst = max(1, int(round(base * 2)))
+    real_s = BLOCKS_PER_EPOCH / real_total_bonds
 
     config = SimConfig(
         anchor_epoch=epoch_num,
         target_epoch=max(60, epoch_num + 42),
         anchor_total_bonds=real_total_bonds,
+        anchor_s=real_s,
+        dilution_rate=dilution_rate,
+        accumulate_dilution=accum_dilution,
+        burst_dilution=burst_dilution,
+        anchor_phase=anchor_phase,
         vps1_bonds=vps1_bonds or 2,
         vps1_spendable=vps1_spendable or 0.0,
-        vps2_bonds=vps2_bonds or 2,
-        vps2_spendable=vps2_spendable or 0.0,
-        structural_accumulate=new_accumulate,
-        structural_burst=new_burst,
         accuracy_log=accuracy_log,
     )
 
@@ -243,9 +194,8 @@ def handle_recalibrate(query: str, data: dict) -> str:
 
     lines = [
         f"Recalibrated from E{epoch_num} (total_bonds={real_total_bonds})",
-        f"  Structural growth: accumulate={new_accumulate}, burst={new_burst}",
-        f"  VPS1: {vps1_bonds} bonds, {vps1_spendable:.4f} spendable",
-        f"  VPS2: {vps2_bonds} bonds, {vps2_spendable:.4f} spendable",
+        f"  VPS1: {vps1_bonds} bonds, {(vps1_spendable or 0):.4f} spendable",
+        f"  Dilution rate: {dilution_rate:.4f}/epoch",
     ]
     if len(accuracy_log) > 0:
         lines.append(f"  Latest accuracy: {accuracy_log[-1]['accuracy_pct']:.1f}%")
@@ -255,26 +205,35 @@ def handle_recalibrate(query: str, data: dict) -> str:
 
 def handle_summary(data: dict) -> str:
     meta = data["metadata"]
-    sg = meta.get("structural_growth", {})
     epochs = data["epochs"]
     first, last = epochs[0], epochs[-1]
 
-    vps1_events = [e["epoch"] for e in epochs if e["vps1"]["bonded_this_epoch"]]
-    vps2_events = [e["epoch"] for e in epochs if e["vps2"]["bonded_this_epoch"]]
+    bond_epochs = [e["epoch"] for e in epochs if e["vps1"]["bonded_this_epoch"]]
     real_count = sum(1 for e in epochs if e.get("real"))
-    total_combined = sum(e["combined_reward"] for e in epochs)
+    total_reward = sum(e["vps1"]["reward"] for e in epochs)
+
+    # Find next bond epoch
+    anchor = meta["anchor_epoch"]
+    next_bond = next((e for e in epochs if e["epoch"] > anchor and e["vps1"]["bonded_this_epoch"]), None)
+    next_bond_str = f"E{next_bond['epoch']}" if next_bond else "not in range"
+
+    # Current spendable (anchor epoch)
+    anchor_e = epochs[0]
+    spendable_now = anchor_e["vps1"]["spendable"]
+    need_now = anchor_e["vps1"].get("need_to_bond", max(0.0, 10.01 - spendable_now))
 
     lines = [
         f"Projection: E{meta['anchor_epoch']} -> E{meta['target_epoch']} ({meta['model']} model)",
-        f"Structural growth: accumulate={sg.get('accumulate_epoch', '?')}, burst={sg.get('burst_epoch', '?')}",
         f"Network: {first['total_bonds']} -> {last['total_bonds']} bonds",
         f"Share value: {first['s']:.4f} -> {last['s']:.4f}",
         f"Real data points: {real_count}",
         f"",
-        f"VPS1: {first['vps1']['bonds']} -> {last['vps1']['bonds']} bonds | bond epochs: {vps1_events}",
-        f"VPS2: {first['vps2']['bonds']} -> {last['vps2']['bonds']} bonds | bond epochs: {vps2_events}",
+        f"VPS1: {first['vps1']['bonds']} bonds now -> {last['vps1']['bonds']} bonds at E{meta['target_epoch']}",
+        f"VPS1 spendable now: {spendable_now:.8f} DOLI (need {need_now:.8f} more to bond)",
+        f"Next bond: {next_bond_str}",
+        f"All bond epochs: {bond_epochs}",
         f"",
-        f"Total combined reward over range: {total_combined:.4f} DOLI",
+        f"Total VPS1 reward over range: {total_reward:.4f} DOLI",
     ]
 
     if data.get("accuracy_log"):
@@ -298,15 +257,13 @@ def route_query(query: str) -> str:
         return handle_recalibrate(query, data)
     if "accuracy" in q and ("check" in q or "actual" in q):
         return handle_accuracy_check(query, data)
-    if "when" in q and "reach" in q:
-        return handle_when_reach(q, data)
     if "when" in q and "bond" in q:
-        return handle_when_bond(q, data)
+        return handle_when_bond(data)
     if ("what is s" in q or "share" in q) and ("epoch" in q or re.search(r'e\d+', q)):
         return handle_s_at_epoch(q, data)
     if "reward" in q and ("epoch" in q or re.search(r'e\d+', q)):
         return handle_reward_at_epoch(q, data)
-    if ("how many bonds" in q or "bond count" in q) and ("epoch" in q or re.search(r'e\d+', q)):
+    if ("how many bonds" in q or "bond count" in q or "bonds at" in q) and ("epoch" in q or re.search(r'e\d+', q)):
         return handle_bonds_at_epoch(q, data)
     if "summary" in q or "overview" in q:
         return handle_summary(data)
@@ -321,12 +278,11 @@ def route_query(query: str) -> str:
     return (
         "Could not understand query. Try:\n"
         '  "when does vps1 next bond"\n'
-        '  "what is s at epoch 25"\n'
-        '  "combined reward at epoch 30"\n'
-        '  "how many bonds do we have at epoch 40"\n'
-        '  "when do we reach 5 bonds each"\n'
-        '  "accuracy check e19 actual_bonds=670"\n'
-        '  "recalibrate e19 total_bonds=670"\n'
+        '  "what is s at epoch 85"\n'
+        '  "reward at epoch 85"\n'
+        '  "how many bonds at epoch 90"\n'
+        '  "accuracy check e80 actual_bonds=2757"\n'
+        '  "recalibrate e80 total_bonds=2757 vps1_bonds=12 vps1_spendable=6.48"\n'
         '  "summary"'
     )
 
@@ -334,9 +290,5 @@ def route_query(query: str) -> str:
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python query.py \"<query>\"")
-        print("\nExamples:")
-        print('  python query.py "when does vps1 next bond"')
-        print('  python query.py "what is s at epoch 25"')
-        print('  python query.py "summary"')
         sys.exit(1)
     print(route_query(" ".join(sys.argv[1:])))
